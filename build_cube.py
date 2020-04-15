@@ -7,7 +7,7 @@ Created on Sat Apr 11 01:31:24 2020
 """
 
 import util_general
-from constants_used_for_data_manip import *
+from constants_used_for_insights_engine import *
 import postgres_utilities
 
 

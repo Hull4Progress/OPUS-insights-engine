@@ -6,7 +6,7 @@ Created on Fri Oct 18 18:03:15 2019
 @author: rick
 """
 
-from constants_used_for_data_manip import *
+from constants_used_for_insights_engine import *
 
 import util_general
 import postgres_utilities

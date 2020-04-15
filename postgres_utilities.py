@@ -6,7 +6,7 @@ Created on Thu Apr  9 15:19:50 2020
 @author: rick
 """
 
-from constants_used_for_data_manip import *
+from constants_used_for_insights_engine import *
 import util_general
 
 import sys

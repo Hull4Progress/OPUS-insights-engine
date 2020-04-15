@@ -8,14 +8,14 @@ echo '\nLaunching the script to import raw OPUS data into postgres\n'
 python3 import_OPUS_data.py
 
 echo '\n\n##############################################'
-echo '\nLanching the script to add column for hours_worked on each claim\n'
+echo '\nLanching the script to synthesize addigional claims and add several columns to them\n'
 
-python3 manip_claims_with_pandas.py
+python3 initial_claims_processing__columns_and_days.py
 
-echo '\n\n##############################################'
-echo '\nLanching the script that explores data cube operations\n'
+# echo '\n\n##############################################'
+# echo '\nLanching the script that explores data cube operations\n'
 
-python3 cube_explorations.py
+# python3 cube_explorations.py
 
 
 
