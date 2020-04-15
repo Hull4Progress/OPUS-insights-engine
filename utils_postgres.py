@@ -7,7 +7,7 @@ Created on Thu Apr  9 15:19:50 2020
 """
 
 from constants_used_for_insights_engine import *
-import util_general
+import utils_general
 
 import sys
 

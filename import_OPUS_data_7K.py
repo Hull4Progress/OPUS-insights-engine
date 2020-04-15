@@ -16,13 +16,6 @@ from datetime import datetime
 
 import sys
 
-import pandas as pd
-# see pandas 1.0.3 api reference guid:
-#   https://pandas.pydata.org/pandas-docs/stable/reference/index.html
-#   older pandas: see https://pandas.pydata.org/pandas-docs/version/0.13/api.html, search for sql
-import pandas.io.sql as psql
-
-
 # see http://initd.org/psycopg/docs/usage.html
 import psycopg2
 # from psycopg2.extras import RealDictCursor
@@ -39,37 +32,17 @@ import psycopg2.extras
 #
 ####################################
 
-def import_claims_csv_into_df():
-    print('\nEntering function to import 5K claims csv into a dataframe')
-    df = pd.read_csv(RAMESH_CLAIMS_CSV_5K)
-    # print(list(df.columns.values))
-    print('Successfully imported the 5K claims csv file')
-    return df
-    
-def clean_df_column_names(df):
-    print('\nEntering function to clean columns names of the df')
-    col_name_list = list(df.columns.values)
-    rename = {}
-    for name in col_name_list:
-        rename[name] = name.replace(' ', '_').replace('#', 'num').replace('/', '__').replace('>','gt')
-        rename[name] = rename[name].replace('-','_').replace('$', 'dollar').replace('srevice_','service')
-        
-        if rename[name][0] == '_':
-            rename[name] = rename[name][1:]
-        if rename[name][-1] == "'":
-            rename[name] = rename[name][:-1]
-        if rename[name][-1] == '_':
-            rename[name] = rename[name][:-1]
-        if rename[name][-1] == '_':
-            rename[name] = rename[name][:-1]
-        if rename[name][-1] == '_':
-            rename[name] = rename[name][:-1]
-        rename['Claims Analysts'] = 'Claims_Analyst'
-        rename['IGO, NIGO'] = 'IGO_NIGO'
-        
-        
-    print(str(rename))
-
+def drop__claims__table(db):
+    print('\nEntered drop__claims__table')
+    q = " DROP TABLE claims "
+    try:
+        db['cursor'].execute(q)
+        db['conn'].commit()
+        print('Dropped the table "claims" ')
+    except:
+        # if the attempt to drop table failed, then you have to rollback that request
+        db['conn'].rollback()
+        print('Table "claims" did not exist')
 
 def drop__claims_raw__table(db):
     print('\nEntered drop__claims_raw__table')
@@ -193,22 +166,19 @@ def drop_columns_from__claims_raw__table(db):
 
 if __name__ == '__main__':
     
+    print('\nWARNING: You may need to uncomment some commands from the main program of assemble_triples_table.py (and/or in some of the invoked scripts) in order to get the behaviors that you want.')
+    
     start_datetime = datetime.now()
     print('\nThis program starting running at ' + start_datetime.strftime('%Y-%m-%d %H:%M:%S'))
-    
-    
-    df = import_claims_csv_into_df()
-    df = clean_df_column_names(df)
-    
-    
     
     # open postgres connection with mimic database
     db = utils_postgres.connect_postgres()
         
-    # drop__claims_raw__table(db)
-    # create__claims_raw__table(db)
-    # import_csv_into__claims_raw__table(db)
-    # drop_columns_from__claims_raw__table(db)
+    drop__claims__table(db)
+    drop__claims_raw__table(db)
+    create__claims_raw__table(db)
+    import_csv_into__claims_raw__table(db)
+    drop_columns_from__claims_raw__table(db)
     
 
     # close connection to the mimic database    

@@ -6,9 +6,9 @@ Created on Sat Apr 11 01:31:24 2020
 @author: rick
 """
 
-import util_general
+import utils_general
 from constants_used_for_insights_engine import *
-import postgres_utilities
+import utils_postgres
 
 
 from datetime import datetime
@@ -121,7 +121,7 @@ if __name__ == '__main__':
 
     
     # open postgres connection with mimic database
-    db = postgres_utilities.connect_postgres()
+    db = utils_postgres.connect_postgres()
     
 
 
@@ -130,21 +130,21 @@ if __name__ == '__main__':
 
 
     timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
-    postgres_utilities.export_table_to_csv('claims_extended', db, timestamp)
-    postgres_utilities.export_table_to_csv('claims_agg', db, timestamp)
-    postgres_utilities.export_table_to_csv('claims_cube', db, timestamp)
+    utils_postgres.export_table_to_csv('claims_extended', db, timestamp)
+    utils_postgress.export_table_to_csv('claims_agg', db, timestamp)
+    utils_postgres.export_table_to_csv('claims_cube', db, timestamp)
 
 
     # close connection to the mimic database    
-    postgres_utilities.close_postgres(db)
+    utils_postgres.close_postgres(db)
     
     
 
     end_datetime = datetime.now()
     duration_in_s = (end_datetime - start_datetime).total_seconds()
-    seconds = util_general.truncate(duration_in_s, 2)
-    minutes = util_general.truncate(duration_in_s/60, 2) # divmod(duration_in_s, 60)[0] 
-    hours = util_general.truncate(duration_in_s/3600, 2) # divmod(duration_in_s, 3600)[0]
+    seconds = utils_general.truncate(duration_in_s, 2)
+    minutes = utils_general.truncate(duration_in_s/60, 2) # divmod(duration_in_s, 60)[0] 
+    hours = utils_general.truncate(duration_in_s/3600, 2) # divmod(duration_in_s, 3600)[0]
     
     print('\nThe cube_explorations script starting running at ' + start_datetime.strftime('%Y-%m-%d %H:%M:%S'))
     print('It finished running at ' + end_datetime.strftime('%Y-%m-%d %H:%M:%S'))

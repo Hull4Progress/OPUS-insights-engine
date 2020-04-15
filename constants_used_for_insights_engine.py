@@ -17,7 +17,8 @@ DB_ADDRESS_FOR_SQLALCHEMY = "postgresql://rick:postgres@localhost:5432/opus"
 
 
 # location of synthetic claims data created by Ramesh
-RAMESH_CLAIMS_CSV = "../OPUS_DATA/2020-01-18--Opus--Ramesh-example-data.csv"
+RAMESH_CLAIMS_CSV_7K = "../OPUS_DATA/2020-01-18--Opus--Ramesh-example-data.csv"
+RAMESH_CLAIMS_CSV_5K = "../OPUS_DATA/2020-04-13a--Total---5386.csv"
 
 OPUS_DATA_OUTPUTS_DIR = "../OPUS_DATA/DATA_OUTPUTS/"
 

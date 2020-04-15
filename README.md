@@ -18,11 +18,13 @@ this table claims_agg probably doesn't make sense any more.)
 - build_cube.py: script that will build a requested group-by aggregation table and write
 that as a .csv into the DATA_OUTPUT direcory (for the exact location please see 
 constants_used_for_data_manip.py). 
-- cube_explorations.py: (deprecated): based on a curious SQL query that creates, in essence, 
+- files that end with "_7K.py" (deprecated): these were developed for the raw claims data set
+with about 7K claims in it; we will delete this files in a while
+- cube_explorations_7K.py (deprecated): based on a curious SQL query that creates, in essence, 
 the union of many group-by aggregation tables, all placed into one table called 
 claims_cube.  (This was developed for an earlier version  of the claims_raw data,
 and has not yet been upgraded to the 5K claims dataset.)
 - utils_general.py: some basic utility functions
-- postgres_utilities.py: some postgres-specific utilities
+- utils_postgres.py: some postgres-specific utilities
 - run.sh: a shell script use to invoke some selected python scripts; right now the focus
 is on initialization, spez., invoking import_OPUS_data.py and initial_claims_process__columns_and_days.py
