@@ -139,7 +139,7 @@ def load_df_into_table_with_same_columns(df, db, table_name):
             db['conn'].commit()
         except Exception as e:  # if you don't want the exception comment, then drop "Exception as e"
             db['conn'].rollback()
-            print('  Failed to create index ' + key + ', probably because it already exists')
+            print('  Failed to load dataframe into the table with name "' + table_name + '"')
             # """
             # to use this part, also adjust the "except" line 3 lines above
             print('  The exception error message is as follows:')

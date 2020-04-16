@@ -6,6 +6,8 @@ Created on Wed Sep 18 00:19:34 2019
 @author: rick
 """
 
+from constants_used_for_insights_engine import *
+
 from datetime import datetime
 from datetime import date
 
@@ -43,7 +45,29 @@ def days_between_dates(d1, d2):
 #  says that the input can be of form "YYYY-MM-DD" -- don't have to convert to datetime dates
 #  (which is good, because pandas wasn't happy working with datetime dates)
 def biz_days_between_dates(d1, d2):
-     return int(np.busday_count(d1, d2))
+     return int(np.busday_count(d1, d2, holidays=US_HOLIDAY_LIST))
+ 
+# see https://docs.scipy.org/doc/numpy/reference/generated/numpy.busday_offset.html#numpy.busday_offset
+#   for examples of the busday_offset with the roll='forward'
+def biz_days_offset(date, count):
+    date1 = np.busday_offset(date, 0, roll='forward', holidays=US_HOLIDAY_LIST)
+    if not np.is_busday(date, holidays=US_HOLIDAY_LIST):
+        print('\nWARNING: the date "' + str(date) + '" is not a business day; ' \
+              + 'using the first business day immediately following that date,' \
+              + 'namely, "' + str(date1) + '"\n')    
+    biz_date = np.busday_offset(date1, count, holidays=US_HOLIDAY_LIST)
+    # print('inside utils_general we have value: ' + str(biz_date))
+    return str(biz_date)   
+        
+# used to take date2, which is x calendar days after date1 (which is typically 2019-11-01)
+#   into the date2' which is x BUSINESS DAYS after date1
+def convert_date2_after_date1_to_biz_date_after_date1(date1, date2):    
+    count = days_between_dates(date1, date2)
+    biz_date = biz_days_offset(date1, count)
+    return biz_date
+
+ 
+    
     
 
 ####################################
