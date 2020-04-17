@@ -93,10 +93,15 @@ def compute_above_10_biz_days(total_biz_days):
 def add_columns_to_df(df):  
     print('\nHave entered function to add the derived columns to the dataframe.')
 
-    df['total_hours'] = df.apply(lambda row: compute_hours_worked(row.nigo_follow_up_hours,
-                                                       row.prelim_dec_plus_nurse_no_nurse_hours,
-                                                       row.nurse_review_hours,
-                                                       row.final_dec_if_nurse_review_hours),
+    df['total_anal_hours'] = df.apply(lambda row: row.nigo_follow_up_hours +\
+                                                  row.prelim_dec_plus_nurse_no_nurse_hours +\
+                                                  row.final_dec_if_nurse_review_hours,
+                                          axis=1)
+    
+    df['total_hours'] = df.apply(lambda row: row.nigo_follow_up_hours +\
+                                             row.prelim_dec_plus_nurse_no_nurse_hours +\
+                                             row.nurse_review_hours +\
+                                             row.final_dec_if_nurse_review_hours,
                                           axis=1)
     
     df['total_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.date_received,
@@ -162,6 +167,7 @@ def create__claims_extended__table(db):
               PRIMARY KEY (Claim_num);
           
           ALTER TABLE claims_extended
+          ADD COLUMN total_anal_hours float8,
           ADD COLUMN total_hours float8,
           ADD COLUMN total_biz_days int4,
           ADD COLUMN over_five_biz_days int4,

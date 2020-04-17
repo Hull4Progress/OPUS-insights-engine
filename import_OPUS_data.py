@@ -277,7 +277,7 @@ def create__claims_raw_biz__table(db):
         print('Created table "claims_raw_biz", including a commit')
     except Exception as e:  # if you don't want the exception comment, then drop "Exception as e"
         db['conn'].rollback()
-        print('Attempt to create table "claims_raw+biz" has failed')
+        print('Attempt to create table "claims_raw_biz" has failed')
         # """
         # to use this part, also adjust the "except" line 3 lines above
         print('  The exception error message is as follows:')
