@@ -32,8 +32,16 @@ def truncate(f, n):
 def convert_string_date_to_date(d):
     return date(int(d[0:4]), int(d[5:7]), int(d[8:10]))
 
-# assumes that dates are in format YYYY-MM-DD
+def display_df(df):
+    # see https://thispointer.com/python-pandas-how-to-display-full-dataframe-i-e-print-all-rows-columns-without-truncation/
+    #   to understand these and other display options
+    # see also https://stackoverflow.com/questions/57860775/pandas-pd-options-display-max-rows-not-working-as-expected
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.min_rows', 30)
+    print(df)
 
+
+# assumes that dates are in format YYYY-MM-DD
 def days_between_dates(d1, d2):
      date1 = convert_string_date_to_date(d1)
      date2 = convert_string_date_to_date(d2)

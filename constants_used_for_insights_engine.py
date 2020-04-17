@@ -37,6 +37,8 @@ RAMESH_CLAIMS_CSV_5K = "../OPUS_DATA/2020-04-13b--Total---5386.csv"
 
 DIAGNOSIS_DURATION_PARAMETERS = "../OPUS_DATA/Diagnosis_Duration_Parameters_v01.csv"
 
+CLAIMS_ANALYST_PARAMETERS = "../OPUS_DATA/Claims_Analyst_Parameters_v01.csv"
+
 OPUS_DATA_OUTPUTS_DIR = "../OPUS_DATA/DATA_OUTPUTS/"
 
 

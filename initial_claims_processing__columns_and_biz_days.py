@@ -90,7 +90,7 @@ def compute_above_10_biz_days(total_biz_days):
     else:
         return 1
 
-def add_columns_to_df(df):  
+def build__claims_extended__df(df):  
     print('\nHave entered function to add the derived columns to the dataframe.')
 
     df['total_anal_hours'] = df.apply(lambda row: row.nigo_follow_up_hours +\
@@ -152,7 +152,7 @@ def drop__claims_extended__table(db):
         print('Table "claims_extended" did not exist')
 
 def create__claims_extended__table(db):
-    print('\nEntered create__claims_exztended__table')
+    print('\nEntered create__claims_extended__table')
     q = """
           CREATE TABLE claims_extended as
           SELECT *
@@ -299,21 +299,21 @@ if __name__ == '__main__':
 
     
 
-    df = pull__claims_raw_biz__table_into_df(db)
-    df = add_columns_to_df(df)
-    print(df)
-    print(list(df.columns.values))
+    df_raw = pull__claims_raw_biz__table_into_df(db)
+    df_ext = build__claims_extended__df(df_raw)
+    print(df_ext)
+    print(list(df_ext.columns.values))
     
     drop__claims_extended__table(db)
     create__claims_extended__table(db)
     
     # using psycopg2 and psycopg2.extras:
-    utils_postgres.load_df_into_table_with_same_columns(df, db, 'claims_extended')
+    utils_postgres.load_df_into_table_with_same_columns(df_ext, db, 'claims_extended')
     
     print('\nWriting dataframe for claims_extended into csv file')
     timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
     prefix = OPUS_DATA_OUTPUTS_DIR + timestamp + '__'
-    df.to_csv(prefix + 'claims_extended.csv', index=False)
+    df_ext.to_csv(prefix + 'claims_extended.csv', index=False)
     
 
     '''
