@@ -202,7 +202,7 @@ def push_df_into__claims_extended__table(df, db):
     print('\nHave entered function push_df_into__claims_extended__table')
 
     table_name = 'claims_extended'
-    utils_postgres.load_df_into_table_with_same_columns(table_name, df, db)
+    utils_postgres.load_df_into_table_with_same_columns(df, db, table_name)
     
 
 

@@ -137,6 +137,7 @@ def load_df_into_table_with_same_columns(df, db, table_name):
         try:
             psycopg2.extras.execute_batch(db['cursor'], insert_stmt, df.values)
             db['conn'].commit()
+            print('Succeeded with the insertion of dataframe records into postgres table')
         except Exception as e:  # if you don't want the exception comment, then drop "Exception as e"
             db['conn'].rollback()
             print('  Failed to load dataframe into the table with name "' + table_name + '"')
@@ -148,6 +149,8 @@ def load_df_into_table_with_same_columns(df, db, table_name):
             else:
                 print(e)
             # """
+            
+        return
             
     
 def export_table_to_csv(table, db, timestamp):

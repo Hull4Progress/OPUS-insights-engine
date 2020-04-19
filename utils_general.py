@@ -31,6 +31,7 @@ def truncate(f, n):
 
 def convert_string_date_to_date(d):
     return date(int(d[0:4]), int(d[5:7]), int(d[8:10]))
+    # could also use: datetime.strptime(date_str, '%Y-%m-%d').date()
 
 def display_df(df):
     # see https://thispointer.com/python-pandas-how-to-display-full-dataframe-i-e-print-all-rows-columns-without-truncation/
@@ -42,12 +43,19 @@ def display_df(df):
 
 
 # assumes that dates are in format YYYY-MM-DD
-def days_between_dates(d1, d2):
+def cal_days_between_dates(d1, d2):
      date1 = convert_string_date_to_date(d1)
      date2 = convert_string_date_to_date(d2)
      delta = date2 - date1
      return delta.days
- 
+
+def cal_days_offset(date_str, count):
+    return str(convert_string_date_to_date(date_str) + pd.to_timedelta(count, unit='D')) 
+
+def biz_day_on_or_immed_after(date_str):
+    biz_date = np.busday_offset(date_str, 0, roll='forward', holidays=US_HOLIDAY_LIST)
+    return str(biz_date)
+    
 # 4th comment in 
 #  https://stackoverflow.com/questions/3615375/count-number-of-days-between-dates-ignoring-weekends
 #  says that the input can be of form "YYYY-MM-DD" -- don't have to convert to datetime dates
@@ -106,7 +114,7 @@ if __name__ == '__main__':
     d1 = "2020-12-23"
     d2 = "2020-12-27"
     
-    diff = days_between_dates(d1, d2)
+    diff = cal_days_between_dates(d1, d2)
     print(type(diff))
     print(str(diff))
           

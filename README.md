@@ -1,8 +1,14 @@
 # OPUS-insights-engine
 
+This README.md is a work in progress and does not attempt to be comprehensive at this point.
+Also, the underlying code is evolving and this README.md may be out-of-date.
+
+
+
 This repository holds a mix of python3, SQL, and shell code for manipulating insurance 
 claims data according to the OPUS framework.  The code assumes that
 - appropriate raw data about claims is available in a .csv file
+- appropriate raw data about some auxiliary info is available in .csv files (this currently includes claims_analyst_parameters.csv and diagnosis_duration_parameters.csv)
 - an instance of postgres is intalled on your local machine
 
 Key modules currently include (this was written 2020-04-15 and may now be out of date)
@@ -36,3 +42,4 @@ and has not yet been upgraded to the 5K claims dataset.)
 
 - run.sh: a shell script use to invoke some selected python scripts; right now the focus
 is on initialization, spez., invoking import_OPUS_data.py and initial_claims_process__columns_and_days.py
+
