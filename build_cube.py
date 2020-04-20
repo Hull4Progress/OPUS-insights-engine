@@ -6,10 +6,9 @@ Created on Sat Apr 11 01:31:24 2020
 @author: rick
 """
 
-import utils_general
 from constants_used_for_insights_engine import *
+import utils_general
 import utils_postgres
-
 
 from datetime import datetime
 

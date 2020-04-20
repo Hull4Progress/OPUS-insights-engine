@@ -233,13 +233,17 @@ def pull__claims_analyst_parameters__table_into_df(db):
 
 
 
-def pull__claims_extended__table_into_df(db): 
-    print('\nEntering pull__claims_extended__table_into_df')
-    q = """
-          SELECT * from claims_extended
-          ORDER BY Claim_Num
-        """
-    df = psql.read_sql(q, db['conn'])  
+def pull__claims_extended__table_into_df(db, switch): 
+    print('\nEntering pull__claims_extended__table_into_df with switch = :' + switch)
+    q_temp = """
+              SELECT * from {}
+              ORDER BY Claim_Num
+             """
+    if switch == '5K':
+        q = q_temp.format('claims_extended')
+    else:
+        q = q_temp.format('claims_extended_replicated')
+    df = psql.read_sql(q, db['conn'])
     return df
 
 def compute_analyst_duration_touch_compliance(row, dfs):
@@ -552,16 +556,23 @@ def build__claims_with_durations__df(dfs):
 ####################################
 
 
-def drop__claims_with_durations__table(db):
-    print('\nEntered drop__claims_with_durations__table')
-    q = " DROP TABLE claims_with_durations"
+def drop__claims_with_durations__table(db, switch):
+    print('\nEntered drop__claims_with_durations__table with switch value: ' + switch)
+    if switch == '5K':
+        table = 'claims_with_durations'
+    else:
+        table = 'claims_replicated_with_durations'
+    q = " DROP TABLE {}"
+    q = q.format(table)
+    print(q)
+
     try:
         db['cursor'].execute(q)
         db['conn'].commit()
-        print('Dropped the table "claims_with_durations" ')
+        print('Dropped the table "' + table + '"')
     except Exception as e:  # if you don't want the exception comment, then drop "Exception as e"
         db['conn'].rollback()
-        print('Failed to drop table "claims_with_durations", perhaps because it did not exist')
+        print('Failed to drop table "' + table + '", perhaps because it did not exist')
         # """
         # to use this part, also adjust the "except" line 3 lines above
         print('  The exception error message is as follows:')
@@ -571,19 +582,28 @@ def drop__claims_with_durations__table(db):
             print(e)
         # """
 
-def create__claims_with_durations__table(db):
-    print('\nEntered create__claims_with_durations__table')
+def create__claims_with_durations__table(db, switch):
+    print('\nEntered create__claims_with_durations__table with switch value: ' + switch)
+    if switch == '5K':
+        table1 = 'claims_with_durations'
+        table2 = 'claims_extended'
+        key = 'Claim_num_for_durations_as_KEY'
+    else:
+        table1 = 'claims_replicated_with_durations'
+        table2 = 'claims_extended_replicated'
+        key = 'Claim_num_for_replicated_durations_as_KEY'
+
     q = """
-          CREATE TABLE claims_with_durations as
+          CREATE TABLE {} as
           SELECT *
-          FROM claims_extended
+          FROM {}
           WHERE Claim_num < 0;
           
-          ALTER TABLE claims_with_durations
-            ADD CONSTRAINT Claim_num_for_durations_as_KEY 
+          ALTER TABLE {}
+            ADD CONSTRAINT {}
               PRIMARY KEY (Claim_num);
           
-          ALTER TABLE claims_with_durations
+          ALTER TABLE {}
           ADD COLUMN analyst_duration_touch_compliance float8,
           ADD COLUMN recommended_dur_touch_count float8,        -- making this a float because Postgres does
                                                                 --   null's in columns of type int
@@ -604,17 +624,19 @@ def create__claims_with_durations__table(db):
           ADD COLUMN dur_touch_4_actual_date date,		
           ADD COLUMN dur_touch_5_actual_date date
         """
+    q = q.format(table1, table2, table1, key, table1)
+    print(q)
     try:
         db['cursor'].execute(q)
         db['conn'].commit()
-        print('Created the table "claims_with_durations" ')
+        print('Created the table "' + table1 + '" ')
     # except:
     #     # if the attempt to drop table failed, then you have to rollback that request
     #     db['conn'].rollback()
     #     print('Table "claims_extended" did not exist')
     except Exception as e:
             db['conn'].rollback()
-            print('  Failed to create table claims_with_durations')
+            print('  Failed to create table ' + table1)
             # """
             # to use this part, also adjust the "except" line 3 lines above
             print('  The exception error message is as follows:')
@@ -625,11 +647,13 @@ def create__claims_with_durations__table(db):
             # """
 
     
-def push_df_into__claims_with_durations__table(df, db):
-    print('\nHave entered function push_df_into__claims_with_durations__table')
-
-    table_name = 'claims_with_durations'
-    utils_postgres.load_df_into_table_with_same_columns(df, db, table_name)
+def push_df_into__claims_with_durations__table(df, db, switch):
+    print('\nHave entered function push_df_into__claims_with_durations__table with switch value: ' + switch)
+    if switch == '5K':
+        table = 'claims_with_durations'
+    else:
+        table = 'claims_replicated_with_durations'
+    utils_postgres.load_df_into_table_with_same_columns(df, db, table)
     
 
 
@@ -643,9 +667,14 @@ def push_df_into__claims_with_durations__table(df, db):
 ####################################
 
 if __name__ == '__main__':
+    
+    # switch = '5K'
+    switch = 'replicated'
 
     start_datetime = datetime.now()
     print('\nThis program starting running at ' + start_datetime.strftime('%Y-%m-%d %H:%M:%S'))
+    
+    print('\nThis execution has the value of switch set to: ' + switch)
 
     dfs = {}
     
@@ -653,9 +682,9 @@ if __name__ == '__main__':
     db = utils_postgres.connect_postgres()
 
 
-    drop__diagnosis_duration_parameters__table(db)
-    create__diagnosis_duration_parameters__table(db)
-    import__diagnosis_duration_parameters_csv__into_postgres(db)
+    # drop__diagnosis_duration_parameters__table(db)
+    # create__diagnosis_duration_parameters__table(db)
+    # import__diagnosis_duration_parameters_csv__into_postgres(db)
     df_dur = pull__diagnosis_duration_parameters__table_into_df(db)
     dfs['dur'] = df_dur
     # utils_general.display_df(df_dur)
@@ -669,22 +698,30 @@ if __name__ == '__main__':
     # utils_general.display_df(dfs['anal'])
     
     
-    df_claims = pull__claims_extended__table_into_df(db)
+    df_claims = pull__claims_extended__table_into_df(db, switch)
     # df_claims = df_claims.head(20)
-    dfs['claims'] = df_claims
+    dfs['claims'] = df_claims    
+    print('\nThe shape of dataframe df_claims is: ' + str(df_claims.shape))
     # utils_general.display_df(df_claims)
     
+
     df_dur = build__claims_with_durations__df(dfs)
     # utils_general.display_df(df_dur)
+    print('\nThe shape of dataframe df_dur is: ' + str(df_claims.shape))
      
-    drop__claims_with_durations__table(db)
-    create__claims_with_durations__table(db)
-    push_df_into__claims_with_durations__table(df_dur, db)
+    drop__claims_with_durations__table(db, switch)
+    create__claims_with_durations__table(db, switch)
+    push_df_into__claims_with_durations__table(df_dur, db, switch)
 
-    print('\nWriting dataframe for claims_with_durations into csv file')
+    if switch == '5K':
+        table = 'claims_with_durations'
+    else:
+        table = 'claims_replicated_with_durations'
+    print('\nWriting dataframe for table "' + table + '" into csv file')
     timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
     prefix = OPUS_DATA_OUTPUTS_DIR + timestamp + '__'
-    df_dur.to_csv(prefix + 'claims_with_durations.csv', index=False)
+    df_dur.to_csv(prefix + table + '.csv', index=False)
+
 
     
     # close connection to the opus database    

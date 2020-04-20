@@ -168,6 +168,24 @@ def export_table_to_csv(table, db, timestamp):
     print('   Wrote csv file ' + dirName + fileName )
     # util_general.print_current_time()
     
+def export_query_to_csv(db, q, timestamp, filenameroot):
+    print('\nEntering function to write output of a query into csv file')
+    
+    outputquery = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(q)
+    # timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
+    dirName = OPUS_DATA_OUTPUTS_DIR 
+    fileName = timestamp + '__' + filenameroot + '.csv'
+    
+    with open(dirName + fileName, 'w') as f:
+        db['cursor'].copy_expert(outputquery, f)
+    f.close()
+    print('   Wrote csv file ' + dirName + fileName )
+    # util_general.print_current_time()
+    
+    
+    
+    
+    
 def export_cube_query_to_csv(columns_list, q, db, timestamp):
     print('\nEntering function to print the output of a cube query to a csv file')
 
