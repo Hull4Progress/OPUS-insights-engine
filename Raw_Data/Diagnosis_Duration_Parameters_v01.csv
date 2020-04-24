@@ -1,0 +1,7 @@
+﻿Diagnosis,Min_Duration_Days,Max_Duration_Days,Rec_Touch_Number,Percent_5_Touches,Percent_4_Touches,Percent_3_Touches,Percent_2_Touches,Percent_1_Touches,Percent_0_Touches,Touch_1_Target_Day,Touch_2_Target_Day,Touch_3_Target_Day,Touch_4_Target_Day,Touch_5_Target_Day
+Maternity,42,50,2,0,0,0,65,15,20,10,25,,,
+Back Disorders,28,42,2,0,0,0,65,15,20,7,15,,,
+Digestive,14,14,0,0,0,0,0,0,100,,,,,
+Injuries,56,84,4,0,55,12,12,6,15,10,20,30,40,
+Joint Disorders,70,105,5,55,10,10,5,5,15,10,20,30,40,55
+Nervous,70,105,5,55,10,10,5,5,15,5,12,22,35,50

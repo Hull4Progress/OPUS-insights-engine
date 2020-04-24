@@ -78,7 +78,7 @@ def biz_days_offset(date, count):
 # used to take date2, which is x calendar days after date1 (which is typically 2019-11-01)
 #   into the date2' which is x BUSINESS DAYS after date1
 def convert_date2_after_date1_to_biz_date_after_date1(date1, date2):    
-    count = days_between_dates(date1, date2)
+    count = cal_days_between_dates(date1, date2)
     biz_date = biz_days_offset(date1, count)
     return biz_date
 

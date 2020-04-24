@@ -30,16 +30,17 @@ DB_ADDRESS_FOR_SQLALCHEMY = "postgresql://rick:postgres@localhost:5432/opus"
 
 
 # location of synthetic claims data created by Ramesh
-RAMESH_CLAIMS_CSV_7K = "../OPUS_DATA/2020-01-18--Opus--Ramesh-example-data.csv"
+# this is old data: RAMESH_CLAIMS_CSV_7K = "../OPUS_DATA/2020-01-18--Opus--Ramesh-example-data.csv"
+
 # with 2020-04-13b a stray value in 'Salary per month' was fixed,
 #   and all dates were put into YYYY-MM-DD format
-RAMESH_CLAIMS_CSV_5K = "../OPUS_DATA/2020-04-13b--Total---5386.csv"
+RAMESH_CLAIMS_CSV_5K = "../Raw_Data/2020-04-13b--Total---5386.csv"
 
-DIAGNOSIS_DURATION_PARAMETERS = "../OPUS_DATA/Diagnosis_Duration_Parameters_v01.csv"
+DIAGNOSIS_DURATION_PARAMETERS = "../Raw_Data/Diagnosis_Duration_Parameters_v01.csv"
 
-CLAIMS_ANALYST_PARAMETERS = "../OPUS_DATA/Claims_Analyst_Parameters_v01.csv"
+CLAIMS_ANALYST_PARAMETERS = "../Raw_Data/Claims_Analyst_Parameters_v01.csv"
 
-OPUS_DATA_OUTPUTS_DIR = "../OPUS_DATA/DATA_OUTPUTS/"
+OPUS_DATA_OUTPUTS_DIR = "../../OPUS_DATA/DATA_OUTPUTS/"
 
 
 # adopted from https://stackoverflow.com/questions/30265711/python-pandas-numpy-direct-calculation-of-number-of-business-days-between
@@ -47,7 +48,7 @@ OPUS_DATA_OUTPUTS_DIR = "../OPUS_DATA/DATA_OUTPUTS/"
 #   https://docs.scipy.org/doc/numpy/reference/generated/numpy.busday_offset.html
 US_HOLIDAY_LIST = USFederalHolidayCalendar().holidays('2019-01-01', '2021-12-31').date.tolist()
 '''
-The set of US federal holidays between 2019-01-01 and 2021-12-31 is:
+The set of US federal holidays between 2019-01-01 and 2021-12-31, as computed above is:
               ['2019-01-01', '2019-01-21', '2019-02-18', '2019-05-27',
                '2019-07-04', '2019-09-02', '2019-10-14', '2019-11-11',
                '2019-11-28', '2019-12-25', '2020-01-01', '2020-01-20',

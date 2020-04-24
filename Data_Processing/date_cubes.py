@@ -32,7 +32,7 @@ import pandas.io.sql as psql
 '''
 Stages are:
     igo_nigo_switch (an automated stage, so happens "immediately")
-    following_up (in the case of nigo)
+    nigo_following_up (in the case of nigo)
     waiting_for_nigo
     deciding_1 (either reaches a final decision of approve/reject or that a nurse review is needed)
     nurse_deciding
@@ -41,12 +41,12 @@ Stages are:
 '''
  
 def inventory_query(db, date):
-    print('\nHave emtered the inventory_query function')
+    print('\nHave entered the inventory_query function')
     q = """
 (select '1_following_up' as stage, count (*)
  from claims_replicated_with_durations c
  where c.igo_nigo = 'NIGO' 
-   and c.date_received <= '{date_str:}'
+   and c.date_received < '{date_str:}'
    and '{date_str:}' <= c.date_follow_up_made) 
 union 
 (select '2_waiting_call' as stage, count (*)
@@ -66,7 +66,7 @@ union
 (select '4_deciding_1' as stage, count (*)
  from claims_replicated_with_durations c
  where ( c.igo_nigo = 'IGO'
-         and c.date_received <= '{date_str:}'
+         and c.date_received < '{date_str:}'
          and '{date_str:}' <= c.date_of_decision__ask_for_nurse_review )      
     or ( c.igo_nigo = 'NIGO'
          and c.date_all_information_received < '{date_str:}'
@@ -98,16 +98,18 @@ union
 (select '8_total' as stage, count(*)
  from claims_replicated_with_durations c
  where (c.decision = 'Approved'
-        and c.date_received <= '{date_str:}'
-        and '{date_str:}' < c.return_to_work_date)
+        and c.date_received < '{date_str:}'
+        and ('{date_str:}' < c.return_to_work_date   -- in some cases return_to_work_date is < final decision date
+             or '{date_str:}' <= c.date_of_decision__ask_for_nurse_review
+             or '{date_str:}' <= c.date_of_decision_after_nurse_review))
     or (c.decision = 'Declined'
         and c.is_nurse_review_required = 'Yes'
-        and c.date_received <= '{date_str:}'
-        and '{date_str:}' < c.date_of_decision_after_nurse_review)
+        and c.date_received < '{date_str:}'
+        and '{date_str:}' <= c.date_of_decision_after_nurse_review)
     or (c.decision = 'Declined'
         and c.is_nurse_review_required = 'No'
-        and c.date_received <= '{date_str:}'
-        and '{date_str:}' < c.date_of_decision__ask_for_nurse_review) )   
+        and c.date_received < '{date_str:}'
+        and '{date_str:}' <= c.date_of_decision__ask_for_nurse_review) )   
 order by stage
         """
 
