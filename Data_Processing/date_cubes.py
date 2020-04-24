@@ -118,9 +118,15 @@ order by stage
 def inventory_query(db, date):
     print('\nHave entered the inventory_query function')
     
-    q = build_parameterized_inventory_query()
+    # q = build_parameterized_inventory_query()
+    # q = q.format(date_str = date)
+    q = build_parameterized_inv_agg_query()
+    q = q.format(date_str = date, 
+                 group_cols = '',
+                 group_comma = '',
+                 group_by = '',
+                 order_by = '')
 
-    q = q.format(date_str = date)
     print('\nThe query with date plugged in is:\n')
     print(q)
     print()
@@ -137,7 +143,173 @@ def compute_inventory(db, list):
         print('\nNote: The date "' + date + '" is not a business day')
     inventory_query(db, date)
     
+def valid_inventory_input(list, suggested_dates):
+    try:
+        biz_date = utils_general.biz_day_on_or_immed_after(list[1])
+    except:
+        print('\n====> You entered the date ' + list[1])
+        print('====> This is not a valid calendar date\n') 
+        return False
+    if list[1] < suggested_dates[0] or list[1] > suggested_dates[1]:
+        print('\n====> You entered the date ' + list[1])
+        print('====> Please use a date that is between ' + suggested_dates[0] + ' and ' + suggested_dates[1])
+        print()
+        return False
+    return True
+
+
+
+####################################
+#
+#   the INV_AGG function
+#
+####################################
+
+    
+def build_parameterized_inv_agg_query():
+    print('\nHave entered the function that creates query template for the inventory and inv_agg queries')
+    q = """
+(select '1_following_up' as stage, {group_cols:}{group_comma:} count (*)
+ from claims_with_durations c
+ where c.igo_nigo = 'NIGO' 
+   and c.received_date < '{date_str:}'
+   and '{date_str:}' <= c.nigo_followed_up_date
+ {group_by:} {group_cols:} )
+union 
+(select '2_waiting_call' as stage, {group_cols:}{group_comma:} count (*)
+ from claims_with_durations c
+ where c.igo_nigo = 'NIGO'
+   and c.nigo_followed_up_mode = 'Call'
+   and c.nigo_followed_up_date < '{date_str:}' 
+   and '{date_str:}' <= c.all_info_received_date
+ {group_by:} {group_cols:} )
+union
+(select '3_waiting_email' as stage, {group_cols:}{group_comma:} count (*)
+ from claims_with_durations c
+ where c.igo_nigo = 'NIGO'
+   and c.nigo_followed_up_mode = 'Email'
+   and c.nigo_followed_up_date < '{date_str:}'
+   and '{date_str:}' <= c.all_info_received_date
+ {group_by:} {group_cols:} )
+union
+(select '4_deciding_1' as stage, {group_cols:}{group_comma:} count (*)
+ from claims_with_durations c
+ where ( c.igo_nigo = 'IGO'
+         and c.received_date < '{date_str:}'
+         and '{date_str:}' <= c.decided_1_date )      
+    or ( c.igo_nigo = 'NIGO'
+         and c.all_info_received_date < '{date_str:}'
+         and '{date_str:}' <= c.decided_1_date ) 
+ {group_by:} {group_cols:} )
+union 
+(select '5_nurse_deciding' as stage, {group_cols:}{group_comma:} count (*)
+ from claims_with_durations c
+ where c.is_nurse_review_required = 'Yes'
+   and c.decided_1_date < '{date_str:}'
+   and '{date_str:}' <= c.nurse_reviewed_date    
+ {group_by:} {group_cols:} )
+union 
+(select '6_deciding_2' as stage, {group_cols:}{group_comma:} count (*)
+ from claims_with_durations c
+ where c.is_nurse_review_required = 'Yes'
+   and c.nurse_reviewed_date < '{date_str:}'
+   and '{date_str:}' <= c.decided_2_date 
+ {group_by:} {group_cols:} )      
+union
+(select '7_paying_out' as stage, {group_cols:}{group_comma:} count (*)
+ from claims_with_durations c
+ where ( c.decision = 'Approved'
+         and c.is_nurse_review_required = 'No'
+         and c.decided_1_date < '{date_str:}'
+         and '{date_str:}' < c.return_to_work_date ) 
+    or ( c.decision = 'Approved'
+         and c.is_nurse_review_required = 'Yes'
+         and c.decided_2_date < '{date_str:}'
+         and '{date_str:}' < c.return_to_work_date ) 
+ {group_by:} {group_cols:} )
+union
+(select '8_total' as stage, {group_cols:}{group_comma:} count(*)
+ from claims_with_durations c
+ where (c.decision = 'Approved'
+        and c.received_date < '{date_str:}'
+        and ('{date_str:}' < c.return_to_work_date   -- in some cases return_to_work_date is < final decision date
+             or '{date_str:}' <= c.decided_1_date
+             or '{date_str:}' <= c.decided_2_date))
+    or (c.decision = 'Declined'
+        and c.is_nurse_review_required = 'Yes'
+        and c.received_date < '{date_str:}'
+        and '{date_str:}' <= c.decided_2_date)
+    or (c.decision = 'Declined'
+        and c.is_nurse_review_required = 'No'
+        and c.received_date < '{date_str:}'
+        and '{date_str:}' <= c.decided_1_date) 
+ {group_by:} {group_cols:} )
+{order_by:}{group_cols:}
+
+        """
+    return q
    
+ 
+
+def inv_agg_query(db, list):
+    print('\nHave entered inv_agg_query function')
+    print(str(list))
+    date = list[0]
+    if len(list) == 1:   # this means there are no columns to do group-by aggregation on
+        compute_inventory(db, list)
+        sys.exit()
+    cols_comma = list[1]    # the list should start without a comma and should end without a comma
+    for i in range(2, len(list)):
+        cols_comma = cols_comma + ', ' + list[i] + ' '
+    print('\nThe list of columns is:', cols_comma)
+    q = build_parameterized_inv_agg_query()
+    q = q.format(date_str = date, 
+                 group_cols = cols_comma,
+                 group_comma = ',',
+                 group_by = 'GROUP BY',
+                 order_by = 'ORDER BY stage, ')
+    print('\nThe query with date and columns plugged in is:\n')
+    print(q)
+    print()
+    cols_dash = list[1]
+    for i in range(2, len(list)):
+        cols_dash = cols_dash + '-' + list[i]
+    print('\nThe list of columns separated with dashes is:', cols_dash)
+    
+    timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
+    filenameroot = 'inv_agg_for__' + cols_dash + '__as_of__' + date 
+    utils_postgres.export_query_to_csv(db, q, timestamp, filenameroot)   
+    
+
+def compute_inv_agg(db, list):
+    date = list[0]
+    print('\nHave entered compute_inv_agg function with input date: ' + date)
+    biz_date = utils_general.biz_day_on_or_immed_after(date)
+    if date != biz_date:
+        print('\nNote: The date "' + date + '" is not a business day')
+    inv_agg_query(db, list)
+    
+def valid_inv_agg_input(list, suggested_dates, permitted_columns):
+    try:
+        biz_date = utils_general.biz_day_on_or_immed_after(list[1])
+    except:
+        print('\n====> You entered the date ' + list[1])
+        print('====> This is not a valid calendar date\n') 
+        return False
+    if list[1] < suggested_dates[0] or list[1] > suggested_dates[1]:
+        print('\n====> You entered the date ' + list[1])
+        print('====> Please use a date that is between ' + suggested_dates[0] + ' and ' + suggested_dates[1])
+        print()
+        return False
+    for i in range(2, len(list)):
+        if list[i] not in permitted_columns:
+            print('\nYou included a column name "' + list[i] + '", but this is not a permitted column name')
+            print('====> The set of permitted column names is: ')
+            print('      ', permitted_columns)
+            print()
+            return False
+    return True
+    
 ####################################
 #
 #   the AGG function
@@ -147,6 +319,37 @@ def compute_inventory(db, list):
 
 def compute_agg(db, list):
     print('\nHave entered compute_agg function')
+    print('   which is not yet implemented')
+
+
+
+def valid_agg_input(list, suggested_dates, permitted_columns):
+    if len(param_list) < 2:
+        print('\n====> For this query you need to provide 2 dates, which provide the bounds on the decision dates of the claims to be considered')
+        return False
+    try:
+        biz_date = utils_general.biz_day_on_or_immed_after(list[1])
+    except:
+        print('\n====> You entered the date ' + list[1])
+        print('====> This is not a valid calendar date\n') 
+        return False
+    try:
+        biz_date = utils_general.biz_day_on_or_immed_after(list[2])
+    except:
+        print('\n====> You entered the date ' + list[2])
+        print('====> This is not a valid calendar date\n') 
+        return False
+    if param_list[2] < param_list[1]:
+        print('\n====> You entered the dates', param_list[1], param_list[2])
+        print('====> Please provide 2 dates where the first is <= the second\n')            
+        return False
+    if param_list[1] < suggested_dates[0] or param_list[1] > suggested_dates[1] \
+            or param_list[2] < suggested_dates[0] or param_list[2] > suggested_dates[1]:
+        print('\n====> You entered the dates', param_list[1], param_list[2])
+        print('====> Please use dates that are between ' + suggested_dates[0] + ' and ' + suggested_dates[1])
+        print()
+        return False
+    return True
 
 
 ####################################
@@ -164,7 +367,11 @@ if __name__ == '__main__':
     # print('Number of arguments: ', str(len(sys.argv)), ' arguments.')
     # print('Argument List:', str(sys.argv))
     
-    permitted_functions = ['inventory', 'agg']
+    permitted_functions = ['inventory', 'inv-agg', 'agg']
+    permitted_functions_with_descriptions = [
+        '- inventory: gives count of inventory for a given date, broken by stage',
+        '- inv-agg: gives count about the inventory for a given date, broken by stage and other categories',
+        '- agg: gives aggregate information for a set of claims decided between 2 dates, broken by selected categories']
     
     permitted_columns = ['diagnosis',
                          'industry',
@@ -173,6 +380,9 @@ if __name__ == '__main__':
                          'igo_nigo',
                          'is_nurse_review_required',
                          'accuracy_of_decision']
+    
+    suggested_dates = ['2019-11-15', '2020-03-01']
+    
     flag = False
     
     param_list = []
@@ -181,16 +391,27 @@ if __name__ == '__main__':
         param_list.append(sys.argv[i])
     print('You entered the function name "', param_list[0], '", and parameters ', param_list[1:])
     
+    
     # open postgres connection with mimic database
     db = utils_postgres.connect_postgres()    
     
     
     if param_list[0] == 'inventory':
+        if not valid_inventory_input(param_list, suggested_dates):
+            sys.exit()
         compute_inventory(db, param_list[1:])
+    elif param_list[0] == 'inv-agg':
+        if not valid_inv_agg_input(param_list, suggested_dates, permitted_columns):
+            sys.exit()
+        compute_inv_agg(db, param_list[1:])
     elif param_list[0] == 'agg':
+        if not valid_agg_input(param_list, suggested_dates, permitted_columns):
+            sys.exit()
         compute_agg(db, param_list[1:])
     else:
-        print('\nThe first parameter must be one of the permitted functions, i.e., one of ' + permitted_functions)
+        print('\nThe first parameter must be one of the permitted functions, i.e., one of: ') 
+        for func in permitted_functions_with_descriptions:
+            print(func)
     
     
 
@@ -209,6 +430,8 @@ if __name__ == '__main__':
     print('This execution of build_cube took ' + str(seconds) + ' seconds')
     # print('The duration in minutes was ' + str(minutes))
     # print('The duration in hours was  ' + str(hours))
+    
+    print()
     
     '''
 

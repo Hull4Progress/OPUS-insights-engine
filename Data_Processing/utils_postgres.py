@@ -167,6 +167,7 @@ def export_table_to_csv(table, db, timestamp):
     f.close()
     print('   Wrote csv file ' + dirName + fileName )
     # util_general.print_current_time()
+
     
 def export_query_to_csv(db, q, timestamp, filenameroot):
     print('\nEntering function to write output of a query into csv file')
@@ -179,7 +180,7 @@ def export_query_to_csv(db, q, timestamp, filenameroot):
     with open(dirName + fileName, 'w') as f:
         db['cursor'].copy_expert(outputquery, f)
     f.close()
-    print('   Wrote csv file ' + dirName + fileName )
+    print('\nSuccessfully ran query and wrote output into csv file: \n' + dirName + fileName )
     # util_general.print_current_time()
     
     
