@@ -74,12 +74,12 @@ def replicate_claims_extended_df(df_ext, i):
     df['customer_num'] = df.apply(lambda row: row.customer_num + (i*100000),
                                          axis=1)
     
-    for field in ['date_received',
-                  'date_follow_up_made',
-                  'date_all_information_received',
-                  'date_of_decision__ask_for_nurse_review',
-                  'date_nurse_decision_made',
-                  'date_of_decision_after_nurse_review']:
+    for field in ['received_date',
+                  'nigo_followed_up_date',
+                  'all_info_received_date',
+                  'decided_1_date',
+                  'nurse_reviewed_date',
+                  'decided_2_date']:
 
         df[field] = df.apply(lambda row: utils_general.biz_days_offset(getattr(row, field), i*15),
                              axis=1)
@@ -94,48 +94,45 @@ def replicate_claims_extended_df(df_ext, i):
 #
 ####################################
 
-def drop__claims_extended_replicated__table(db):
-    print('\nEntered drop__claims_extended_replicated__table')
-    q = " DROP TABLE claims_extended_replicated"
+def drop__claims_replicated__table(db):
+    print('\nEntered drop__claims_replicated__table')
+    q = " DROP TABLE claims_replicated"
     try:
         db['cursor'].execute(q)
         db['conn'].commit()
-        print('Dropped the table "claims_extended_replicated" ')
+        print('Dropped the table "claims_replicated" ')
     except Exception as e:  # if you don't want the exception comment, then drop "Exception as e"
         db['conn'].rollback()
-        print('Failed to drop table "claims_with_durations", perhaps because it did not exist')
-        # """
-        # to use this part, also adjust the "except" line 3 lines above
+        print('Failed to drop table "claims_replicated", perhaps because it did not exist')
         print('  The exception error message is as follows:')
         if hasattr(e, 'message'):
             print(e.message)
         else:
             print(e)
-        # """
 
-def create__claims_extended_replicated__table(db):
-    print('\nEntered create__claims_extended_replicated__table')
+def create__claims_replicated__table(db):
+    print('\nEntered create__claims_replicated__table')
     q = """
-          CREATE TABLE claims_extended_replicated as
+          CREATE TABLE claims_replicated as
           SELECT *
           FROM claims_extended
           WHERE Claim_num < 0;
           
-          ALTER TABLE claims_extended_replicated
+          ALTER TABLE claims_replicated
             ADD CONSTRAINT Claim_num_for_replicated_as_KEY 
               PRIMARY KEY (Claim_num);
         """
     try:
         db['cursor'].execute(q)
         db['conn'].commit()
-        print('Created the table "claims_extended_replicated" ')
+        print('Created the table "claims_replicated" ')
     # except:
     #     # if the attempt to drop table failed, then you have to rollback that request
     #     db['conn'].rollback()
     #     print('Table "claims_extended" did not exist')
     except Exception as e:
             db['conn'].rollback()
-            print('  Failed to create table claims_extended_replicated')
+            print('  Failed to create table claims_replicated')
             # """
             # to use this part, also adjust the "except" line 3 lines above
             print('  The exception error message is as follows:')
@@ -145,10 +142,10 @@ def create__claims_extended_replicated__table(db):
                 print(e)
             # """
 
-def push_df_list_into__claims_extended_replicated__table(df_list, db):
+def push_df_list_into__claims_replicated__table(df_list, db):
     print('\nHave entered function push_df_into__claims_with_durations__table')
 
-    table_name = 'claims_extended_replicated'
+    table_name = 'claims_replicated'
     for i in range(0,len(df_list)):        
         utils_postgres.load_df_into_table_with_same_columns(df_list[i], db, table_name)
         print('Have inserted records from dataframe with index ' + str(i) + ' into postgres table' )
@@ -183,9 +180,9 @@ if __name__ == '__main__':
         
     print('\nThe length of df_list is: ' + str(len(df_list)))
 
-    drop__claims_extended_replicated__table(db)
-    create__claims_extended_replicated__table(db)
-    push_df_list_into__claims_extended_replicated__table(df_list, db)
+    drop__claims_replicated__table(db)
+    create__claims_replicated__table(db)
+    push_df_list_into__claims_replicated__table(df_list, db)
 
 
     df_concat = pd.concat(df_list)
@@ -193,7 +190,7 @@ if __name__ == '__main__':
     print('\nWriting dataframe for claims_extended_replicated into csv file')
     timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
     prefix = OPUS_DATA_OUTPUTS_DIR + timestamp + '__'
-    df_concat.to_csv(prefix + 'claims_extended_replicated.csv', index=False)
+    df_concat.to_csv(prefix + 'claims_replicated.csv', index=False)
 
 
     

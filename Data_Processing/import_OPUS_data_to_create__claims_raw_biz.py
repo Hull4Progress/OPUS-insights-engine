@@ -92,9 +92,9 @@ def clean_df_column_names(df):
     rename['claims_analysts'] = 'claims_analyst'
     rename['igo,_nigo'] = 'igo_nigo'
     rename['follow_up'] = 'nigo_following_up_hours'
-    rename['preliminary_analysis_for_decision_plus_nurse__no_nurse'] = 'decisioning_1_hours'
+    rename['preliminary_analysis_for_decision_plus_nurse__no_nurse'] = 'deciding_1_hours'
     rename['nurse_review'] = 'nurse_reviewing_hours'
-    rename['reconsidered_decision_only_for_nurse_review_cases'] = 'decisioning_2_hours'       
+    rename['reconsidered_decision_only_for_nurse_review_cases'] = 'deciding_2_hours'       
     rename['nurse_review_hours'] = 'nurse_reviewing_hours'
     rename['mode_of_follow_up'] = 'nigo_followed_up_mode'
     rename['date_follow_up_made'] = 'nigo_followed_up_date'
@@ -149,7 +149,8 @@ def drop_columns_that_will_be_computed_with_python(df):
 
 def replace_nulls_with_values(df):
     df['nigo_following_up_hours'] = df['nigo_following_up_hours'].replace(np.nan, 0)
-    df['decisioning_2_hours'] = df['decisioning_2_hours'].replace(np.nan, 0)
+    df['deciding_1_hours'] = df['deciding_1_hours'].replace(np.nan, 0)
+    df['deciding_2_hours'] = df['deciding_2_hours'].replace(np.nan, 0)
     df['accurate_decision'] = df['accurate_decision'].replace(np.nan, 0)
     df['wrongly_approved'] = df['wrongly_approved'].replace(np.nan, 0)
     df['wrongly_declined'] = df['wrongly_declined'].replace(np.nan, 0)
@@ -216,9 +217,9 @@ def create__claims_raw_biz__table(db):
 		     nigo_followed_up_mode varchar,
 		     is_nurse_review_required varchar,
 		     nigo_following_up_hours float8,
-		     decisioning_1_hours float8,
+		     deciding_1_hours float8,
 		     nurse_reviewing_hours float8,
-		     decisioning_2_hours float8,
+		     deciding_2_hours float8,
 		     received_date date,
 		     nigo_followed_up_date date,
 		     all_info_received_date date,

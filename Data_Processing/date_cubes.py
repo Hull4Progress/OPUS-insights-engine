@@ -39,82 +39,89 @@ Stages are:
     deciding_2
     paying_out    
 '''
- 
-def inventory_query(db, date):
-    print('\nHave entered the inventory_query function')
+
+def build_parameterized_inventory_query():
+    print('\nHave entered the function that creates query template for the inventory queries')
     q = """
 (select '1_following_up' as stage, count (*)
- from claims_replicated_with_durations c
+ from claims_with_durations c
  where c.igo_nigo = 'NIGO' 
-   and c.date_received < '{date_str:}'
-   and '{date_str:}' <= c.date_follow_up_made) 
+   and c.received_date < '{date_str:}'
+   and '{date_str:}' <= c.nigo_followed_up_date) 
 union 
 (select '2_waiting_call' as stage, count (*)
- from claims_replicated_with_durations c
+ from claims_with_durations c
  where c.igo_nigo = 'NIGO'
-   and c.mode_of_follow_up = 'Call'
-   and c.date_follow_up_made < '{date_str:}' 
-   and '{date_str:}' <= c.date_all_information_received)
+   and c.nigo_followed_up_mode = 'Call'
+   and c.nigo_followed_up_date < '{date_str:}' 
+   and '{date_str:}' <= c.all_info_received_date)
 union
 (select '3_waiting_email' as stage, count (*)
- from claims_replicated_with_durations c
+ from claims_with_durations c
  where c.igo_nigo = 'NIGO'
-   and c.mode_of_follow_up = 'Email'
-   and c.date_follow_up_made < '{date_str:}'
-   and '{date_str:}' <= c.date_all_information_received)
+   and c.nigo_followed_up_mode = 'Email'
+   and c.nigo_followed_up_date < '{date_str:}'
+   and '{date_str:}' <= c.all_info_received_date)
 union
 (select '4_deciding_1' as stage, count (*)
- from claims_replicated_with_durations c
+ from claims_with_durations c
  where ( c.igo_nigo = 'IGO'
-         and c.date_received < '{date_str:}'
-         and '{date_str:}' <= c.date_of_decision__ask_for_nurse_review )      
+         and c.received_date < '{date_str:}'
+         and '{date_str:}' <= c.decided_1_date )      
     or ( c.igo_nigo = 'NIGO'
-         and c.date_all_information_received < '{date_str:}'
-         and '{date_str:}' <= c.date_of_decision__ask_for_nurse_review ) )
+         and c.all_info_received_date < '{date_str:}'
+         and '{date_str:}' <= c.decided_1_date ) )
 union 
 (select '5_nurse_deciding' as stage, count (*)
- from claims_replicated_with_durations c
+ from claims_with_durations c
  where c.is_nurse_review_required = 'Yes'
-   and c.date_of_decision__ask_for_nurse_review < '{date_str:}'
-   and '{date_str:}' <= c.date_nurse_decision_made )        
+   and c.decided_1_date < '{date_str:}'
+   and '{date_str:}' <= c.nurse_reviewed_date )        
 union 
 (select '6_deciding_2' as stage, count (*)
- from claims_replicated_with_durations c
+ from claims_with_durations c
  where c.is_nurse_review_required = 'Yes'
-   and c.date_nurse_decision_made < '{date_str:}'
-   and '{date_str:}' <= c.date_of_decision_after_nurse_review )        
+   and c.nurse_reviewed_date < '{date_str:}'
+   and '{date_str:}' <= c.decided_2_date )        
 union
 (select '7_paying_out' as stage, count (*)
- from claims_replicated_with_durations c
+ from claims_with_durations c
  where ( c.decision = 'Approved'
          and c.is_nurse_review_required = 'No'
-         and c.date_of_decision__ask_for_nurse_review < '{date_str:}'
+         and c.decided_1_date < '{date_str:}'
          and '{date_str:}' < c.return_to_work_date ) 
     or ( c.decision = 'Approved'
          and c.is_nurse_review_required = 'Yes'
-         and c.date_of_decision_after_nurse_review < '{date_str:}'
+         and c.decided_2_date < '{date_str:}'
          and '{date_str:}' < c.return_to_work_date ) )
 union
 (select '8_total' as stage, count(*)
- from claims_replicated_with_durations c
+ from claims_with_durations c
  where (c.decision = 'Approved'
-        and c.date_received < '{date_str:}'
+        and c.received_date < '{date_str:}'
         and ('{date_str:}' < c.return_to_work_date   -- in some cases return_to_work_date is < final decision date
-             or '{date_str:}' <= c.date_of_decision__ask_for_nurse_review
-             or '{date_str:}' <= c.date_of_decision_after_nurse_review))
+             or '{date_str:}' <= c.decided_1_date
+             or '{date_str:}' <= c.decided_2_date))
     or (c.decision = 'Declined'
         and c.is_nurse_review_required = 'Yes'
-        and c.date_received < '{date_str:}'
-        and '{date_str:}' <= c.date_of_decision_after_nurse_review)
+        and c.received_date < '{date_str:}'
+        and '{date_str:}' <= c.decided_2_date)
     or (c.decision = 'Declined'
         and c.is_nurse_review_required = 'No'
-        and c.date_received < '{date_str:}'
-        and '{date_str:}' <= c.date_of_decision__ask_for_nurse_review) )   
+        and c.received_date < '{date_str:}'
+        and '{date_str:}' <= c.decided_1_date) )   
 order by stage
         """
+    return q
+    
+ 
+def inventory_query(db, date):
+    print('\nHave entered the inventory_query function')
+    
+    q = build_parameterized_inventory_query()
 
     q = q.format(date_str = date)
-    print()
+    print('\nThe query with date plugged in is:\n')
     print(q)
     print()
     timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
@@ -165,7 +172,6 @@ if __name__ == '__main__':
                          'claims_analyst',
                          'igo_nigo',
                          'is_nurse_review_required',
-                         'adherence_to_performance_guarantee',
                          'accuracy_of_decision']
     flag = False
     

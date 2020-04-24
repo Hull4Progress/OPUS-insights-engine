@@ -64,14 +64,17 @@ def compute_hours_worked(claims_per_hour, claim_value_dollars, claim_control_no)
     return rounded_rand_weighted_hours_per_claim 
 '''
 
-def compute_hours_worked(nigo_follow_up_hours,
-                         prelim_dec_plus_nurse_no_nurse_hours,
-                         nurse_review_hours,
-                         final_dec_if_nurse_review_hours):
-    return nigo_follow_up_hours + \
-                         prelim_dec_plus_nurse_no_nurse_hours + \
-                         nurse_review_hours + \
-                         final_dec_if_nurse_review_hours
+
+'''
+def compute_hours_worked(nigo_following_up_hours,
+                         decidong_1_hours,
+                         nurse_reviewing_hours,
+                         deciding_2_hours):
+    return nigo_following_up_hours + \
+                         deciding_1_hours + \
+                         nurse_reviewing_hours + \
+                         deciding_2_hours
+'''
 
 def compute_biz_days_between(date1, date2):
     return utils_general.biz_days_between_dates(date1, date2)
@@ -93,19 +96,19 @@ def compute_above_10_biz_days(total_biz_days):
 def build__claims_extended__df(df):  
     print('\nHave entered function to add the derived columns to the dataframe.')
 
-    df['total_anal_hours'] = df.apply(lambda row: row.nigo_follow_up_hours +\
-                                                  row.prelim_dec_plus_nurse_no_nurse_hours +\
-                                                  row.final_dec_if_nurse_review_hours,
+    df['total_analyst_hours'] = df.apply(lambda row: row.nigo_following_up_hours +\
+                                                  row.deciding_1_hours +\
+                                                  row.deciding_2_hours,
                                           axis=1)
     
-    df['total_hours'] = df.apply(lambda row: row.nigo_follow_up_hours +\
-                                             row.prelim_dec_plus_nurse_no_nurse_hours +\
-                                             row.nurse_review_hours +\
-                                             row.final_dec_if_nurse_review_hours,
+    df['total_hours'] = df.apply(lambda row: row.nigo_following_up_hours +\
+                                             row.deciding_1_hours +\
+                                             row.nurse_reviewing_hours +\
+                                             row.deciding_2_hours,
                                           axis=1)
     
-    df['total_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.date_received,
-                                                                         row.date_of_decision_after_nurse_review),
+    df['total_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.received_date,
+                                                                         row.decided_2_date),
                                     axis=1)
     
     df['over_five_biz_days'] = df.apply(lambda row: compute_above_5_biz_days(row.total_biz_days),
@@ -114,24 +117,24 @@ def build__claims_extended__df(df):
     df['over_ten_biz_days'] = df.apply(lambda row: compute_above_10_biz_days(row.total_biz_days),
                                     axis=1)
 
-    df['nigo_follow_up_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.date_received,
-                                                                         row.date_follow_up_made),
+    df['received_to_nigo_followed_up_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.received_date,
+                                                                         row.nigo_followed_up_date),
                                     axis=1)    
 
-    df['nigo_requested_to_all_info_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.date_follow_up_made,
-                                                                         row.date_all_information_received),
+    df['nigo_followed_up_to_all_info_received_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.nigo_followed_up_date,
+                                                                         row.all_info_received_date),
                                     axis=1)    
 
-    df['all_info_received_to_prelim_dec_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.date_all_information_received,
-                                                                         row.date_of_decision__ask_for_nurse_review),
+    df['all_info_received_to_decided_1_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.all_info_received_date,
+                                                                         row.decided_1_date),
                                     axis=1)    
 
-    df['nurse_dec_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.date_of_decision__ask_for_nurse_review,
-                                                                         row.date_nurse_decision_made),
+    df['decided_1_to_nurse_reviewed_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.decided_1_date,
+                                                                         row.nurse_reviewed_date),
                                     axis=1)    
 
-    df['nurse_dec_to_final_dec_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.date_nurse_decision_made,
-                                                                         row.date_of_decision_after_nurse_review),
+    df['nurse_reviewed_to_decided_2_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.nurse_reviewed_date,
+                                                                         row.decided_2_date),
                                     axis=1)    
 
 
@@ -167,36 +170,29 @@ def create__claims_extended__table(db):
               PRIMARY KEY (Claim_num);
           
           ALTER TABLE claims_extended
-          ADD COLUMN total_anal_hours float8,
+          ADD COLUMN total_analyst_hours float8,
           ADD COLUMN total_hours float8,
           ADD COLUMN total_biz_days int4,
           ADD COLUMN over_five_biz_days int4,
           ADD COLUMN over_ten_biz_days int4,
-          ADD COLUMN nigo_follow_up_biz_days int4,
-          ADD COLUMN nigo_requested_to_all_info_biz_days int4,
-          ADD COLUMN all_info_received_to_prelim_dec_biz_days int4,
-          ADD COLUMN nurse_dec_biz_days int4,
-          ADD COLUMN nurse_dec_to_final_dec_biz_days int4
+          ADD COLUMN received_to_nigo_followed_up_biz_days int4,
+          ADD COLUMN nigo_followed_up_to_all_info_received_biz_days int4,
+          ADD COLUMN all_info_received_to_decided_1_biz_days int4,
+          ADD COLUMN decided_1_to_nurse_reviewed_biz_days int4,
+          ADD COLUMN nurse_reviewed_to_decided_2_biz_days int4
         """
     try:
         db['cursor'].execute(q)
         db['conn'].commit()
         print('Created the table "claims_extended" ')
-    # except:
-    #     # if the attempt to drop table failed, then you have to rollback that request
-    #     db['conn'].rollback()
-    #     print('Table "claims_extended" did not exist')
     except Exception as e:
             db['conn'].rollback()
             print('  Failed to create table claims_extended' )
-            # """
-            # to use this part, also adjust the "except" line 3 lines above
             print('  The exception error message is as follows:')
             if hasattr(e, 'message'):
                 print(e.message)
             else:
                 print(e)
-            # """
 
 def push_df_into__claims_extended__table(df, db):
     print('\nHave entered function push_df_into__claims_extended__table')
@@ -205,6 +201,8 @@ def push_df_into__claims_extended__table(df, db):
     utils_postgres.load_df_into_table_with_same_columns(df, db, table_name)
     
 
+'''
+# Not using this anymore, because all of the group-by aggregates will be focused on date intervals
 
 ####################################
 #
@@ -278,7 +276,7 @@ def build_basic__claims_agg__table(db):
                 print(e)
             # """
 
-
+'''
 
         
 ####################################
@@ -297,8 +295,6 @@ if __name__ == '__main__':
     # open postgres connection with mimic database
     db = utils_postgres.connect_postgres()
 
-    
-
     df_raw = pull__claims_raw_biz__table_into_df(db)
     df_ext = build__claims_extended__df(df_raw)
     print(df_ext)
@@ -315,13 +311,6 @@ if __name__ == '__main__':
     prefix = OPUS_DATA_OUTPUTS_DIR + timestamp + '__'
     df_ext.to_csv(prefix + 'claims_extended.csv', index=False)
     
-
-    '''
-    drop__claims_agg__table(db)
-    build_basic__claims_agg__table(db)
-    '''    
-
-
     # close connection to the mimic database    
     utils_postgres.close_postgres(db)
 
@@ -335,8 +324,8 @@ if __name__ == '__main__':
     print('\nThe initial_claims_processing script starting running at ' + start_datetime.strftime('%Y-%m-%d %H:%M:%S'))
     print('It finished running at ' + end_datetime.strftime('%Y-%m-%d %H:%M:%S'))
     print('The duration in seconds was ' + str(seconds))
-    print('The duration in minutes was ' + str(minutes))
-    print('The duration in hours was  ' + str(hours))
+    # print('The duration in minutes was ' + str(minutes))
+    # print('The duration in hours was  ' + str(hours))
        
 
     

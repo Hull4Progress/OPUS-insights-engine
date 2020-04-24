@@ -90,14 +90,11 @@ def create__diagnosis_duration_parameters__table(db):
     except Exception as e:  # if you don't want the exception comment, then drop "Exception as e"
         db['conn'].rollback()
         print('Attempt to create table "diagnosis_duration_parameters" has failed')
-        # """
-        # to use this part, also adjust the "except" line 3 lines above
         print('  The exception error message is as follows:')
         if hasattr(e, 'message'):
             print(e.message)
         else:
             print(e)
-        # """
 
     
 def import__diagnosis_duration_parameters_csv__into_postgres(db):
@@ -233,16 +230,12 @@ def pull__claims_analyst_parameters__table_into_df(db):
 
 
 
-def pull__claims_extended__table_into_df(db, switch): 
-    print('\nEntering pull__claims_extended__table_into_df with switch = :' + switch)
-    q_temp = """
-              SELECT * from {}
+def pull__claims_replicated__table_into_df(db): 
+    print('\nEntering pull__claims_replicated__table_into_df')
+    q = """
+              SELECT * from claims_replicated
               ORDER BY Claim_Num
              """
-    if switch == '5K':
-        q = q_temp.format('claims_extended')
-    else:
-        q = q_temp.format('claims_extended_replicated')
     df = psql.read_sql(q, db['conn'])
     return df
 
@@ -319,7 +312,7 @@ def compute_payout_start_date(row):
     if row.decision != 'Approved':
         return
     else:
-        return utils_general.biz_days_offset(row.date_received, 5)
+        return utils_general.biz_days_offset(row.received_date, 5)
     
 # We assign the number of paid leave days based on 
 #    the range between min_duration_days and max_duration_days
@@ -428,16 +421,16 @@ if a = 4 < r then
       actual 4 = rec 5 + random
 
 '''
-def final_date(row, target_count):
+def actual_date(row, target_count):
     # print('target_count is: ' + str(target_count))
     target_field = 'dur_touch_' + str(target_count) + '_target_date'
     target_date = getattr(row, target_field)
     # print('target_date is: ' + target_date)
     rand = random.randrange(5)
     # print('rand is: ' + str(rand))
-    final_date = utils_general.biz_days_offset(target_date, rand)
-    # print(str('final_date is: ' + str(final_date)))
-    return final_date
+    actual_date = utils_general.biz_days_offset(target_date, rand)
+    # print(str('actual_date is: ' + str(actual_date)))
+    return actual_date
 
 def compute_dur_touch_actual_date(i, row, dfs):
     if row.decision != 'Approved':
@@ -458,18 +451,18 @@ def compute_dur_touch_actual_date(i, row, dfs):
         elif act_count == 1:       # put target date about in the middle of all the target dates
             # print('i = act_count = 1, so we will put act_touch_1 in the middle of rec_touches')
             target_count = math.floor(dur_dict['rec_touch_number']/2)
-            return final_date(row, target_count)
+            return actual_date(row, target_count)
         elif act_count == rec_count:
             # print('act_count = rec_count = ' + str(act_count) + ' so will set act_touch_i = rec_touch_i')
             target_count = i
-            return final_date(row, target_count)
+            return actual_date(row, target_count)
         else:     # if here then act_count != 1 and act_count != rec_count and i <= act_count
             # print('1 < act_count <= i and act_touch != rec_touch')
             if i == 1:
                 target_count = 1
             else:
                 target_count = i+1
-            return final_date(row, target_count)
+            return actual_date(row, target_count)
  
 
 
@@ -556,23 +549,18 @@ def build__claims_with_durations__df(dfs):
 ####################################
 
 
-def drop__claims_with_durations__table(db, switch):
-    print('\nEntered drop__claims_with_durations__table with switch value: ' + switch)
-    if switch == '5K':
-        table = 'claims_with_durations'
-    else:
-        table = 'claims_replicated_with_durations'
-    q = " DROP TABLE {}"
-    q = q.format(table)
+def drop__claims_with_durations__table(db):
+    print('\nEntered drop__claims_with_durations__table')
+    q = " DROP TABLE claims_with_durations"
     print(q)
 
     try:
         db['cursor'].execute(q)
         db['conn'].commit()
-        print('Dropped the table "' + table + '"')
+        print('Dropped the table claims_with_durations')
     except Exception as e:  # if you don't want the exception comment, then drop "Exception as e"
         db['conn'].rollback()
-        print('Failed to drop table "' + table + '", perhaps because it did not exist')
+        print('Failed to drop table claims_with_durations, perhaps because it did not exist')
         # """
         # to use this part, also adjust the "except" line 3 lines above
         print('  The exception error message is as follows:')
@@ -582,28 +570,19 @@ def drop__claims_with_durations__table(db, switch):
             print(e)
         # """
 
-def create__claims_with_durations__table(db, switch):
-    print('\nEntered create__claims_with_durations__table with switch value: ' + switch)
-    if switch == '5K':
-        table1 = 'claims_with_durations'
-        table2 = 'claims_extended'
-        key = 'Claim_num_for_durations_as_KEY'
-    else:
-        table1 = 'claims_replicated_with_durations'
-        table2 = 'claims_extended_replicated'
-        key = 'Claim_num_for_replicated_durations_as_KEY'
-
+def create__claims_with_durations__table(db):
+    print('\nEntered create__claims_with_durations__table')
     q = """
-          CREATE TABLE {} as
+          CREATE TABLE claims_with_durations as
           SELECT *
-          FROM {}
+          FROM claims_extended
           WHERE Claim_num < 0;
           
-          ALTER TABLE {}
-            ADD CONSTRAINT {}
+          ALTER TABLE claims_with_durations
+            ADD CONSTRAINT Claim_num_for_durations_as_KEY
               PRIMARY KEY (Claim_num);
           
-          ALTER TABLE {}
+          ALTER TABLE claims_with_durations
           ADD COLUMN analyst_duration_touch_compliance float8,
           ADD COLUMN recommended_dur_touch_count float8,        -- making this a float because Postgres does
                                                                 --   null's in columns of type int
@@ -624,35 +603,23 @@ def create__claims_with_durations__table(db, switch):
           ADD COLUMN dur_touch_4_actual_date date,		
           ADD COLUMN dur_touch_5_actual_date date
         """
-    q = q.format(table1, table2, table1, key, table1)
-    print(q)
     try:
         db['cursor'].execute(q)
         db['conn'].commit()
-        print('Created the table "' + table1 + '" ')
-    # except:
-    #     # if the attempt to drop table failed, then you have to rollback that request
-    #     db['conn'].rollback()
-    #     print('Table "claims_extended" did not exist')
+        print('Created the table claims_with_durations ')
     except Exception as e:
             db['conn'].rollback()
-            print('  Failed to create table ' + table1)
-            # """
-            # to use this part, also adjust the "except" line 3 lines above
+            print('  Failed to create table claims_with_durations')
             print('  The exception error message is as follows:')
             if hasattr(e, 'message'):
                 print(e.message)
             else:
                 print(e)
-            # """
 
     
-def push_df_into__claims_with_durations__table(df, db, switch):
-    print('\nHave entered function push_df_into__claims_with_durations__table with switch value: ' + switch)
-    if switch == '5K':
-        table = 'claims_with_durations'
-    else:
-        table = 'claims_replicated_with_durations'
+def push_df_into__claims_with_durations__table(df, db):
+    print('\nHave entered function push_df_into__claims_with_durations__table')
+    table = 'claims_with_durations'
     utils_postgres.load_df_into_table_with_same_columns(df, db, table)
     
 
@@ -668,19 +635,13 @@ def push_df_into__claims_with_durations__table(df, db, switch):
 
 if __name__ == '__main__':
     
-    # switch = '5K'
-    switch = 'replicated'
-
     start_datetime = datetime.now()
     print('\nThis program starting running at ' + start_datetime.strftime('%Y-%m-%d %H:%M:%S'))
     
-    print('\nThis execution has the value of switch set to: ' + switch)
-
     dfs = {}
     
     # open postgres connection with mimic database
     db = utils_postgres.connect_postgres()
-
 
     # drop__diagnosis_duration_parameters__table(db)
     # create__diagnosis_duration_parameters__table(db)
@@ -698,30 +659,26 @@ if __name__ == '__main__':
     # utils_general.display_df(dfs['anal'])
     
     
-    df_claims = pull__claims_extended__table_into_df(db, switch)
+    df_claims = pull__claims_replicated__table_into_df(db)
     # df_claims = df_claims.head(20)
     dfs['claims'] = df_claims    
-    print('\nThe shape of dataframe df_claims is: ' + str(df_claims.shape))
+    print('\nThe shape of dataframe df_claims is: ' + str(dfs['claims'].shape))
     # utils_general.display_df(df_claims)
     
 
     df_dur = build__claims_with_durations__df(dfs)
     # utils_general.display_df(df_dur)
-    print('\nThe shape of dataframe df_dur is: ' + str(df_claims.shape))
+    print('\nThe shape of dataframe df_dur is: ' + str(df_dur.shape))
      
-    drop__claims_with_durations__table(db, switch)
-    create__claims_with_durations__table(db, switch)
-    push_df_into__claims_with_durations__table(df_dur, db, switch)
+    drop__claims_with_durations__table(db)
+    create__claims_with_durations__table(db)
+    push_df_into__claims_with_durations__table(df_dur, db)
 
-    if switch == '5K':
-        table = 'claims_with_durations'
-    else:
-        table = 'claims_replicated_with_durations'
+    table = 'claims_with_durations'
     print('\nWriting dataframe for table "' + table + '" into csv file')
     timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
     prefix = OPUS_DATA_OUTPUTS_DIR + timestamp + '__'
     df_dur.to_csv(prefix + table + '.csv', index=False)
-
 
     
     # close connection to the opus database    
