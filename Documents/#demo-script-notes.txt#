@@ -1,0 +1,25 @@
+=====================
+
+One interesting sequence:
+
+Let's look at avg TAT, and TAT > 5 days, and TAT > 10 days
+> python3 date_cubes.py agg 2020-02-03 2020-02-08
+
+Hmmm - fairly high percentages of TAT > 10 days, let's drill by claims_analyst
+
+> python3 date_cubes.py agg 2020-02-03 2020-02-08 claims_analyst
+
+Hmmm - fairly high percentages of TAT > 10 days, let's drill further into igo_nigo
+
+> python3 date_cubes.py agg 2020-02-03 2020-02-08 claims_analyst igo_nigo
+
+Hmmm - fairly high percentages of TAT > 10 days for all of the NIGO's;
+  let's look at nurse reviews also
+
+> python3 date_cubes.py agg 2020-02-03 2020-02-08 claims_analyst igo_nigo is_nurse_review_required
+
+Hmm -- still high percentages for both without nurse review and for with nurse review
+
+Conclusion - do we want to tweak the durations a little to have lower TAT > 10 days ??
+
+==============================
