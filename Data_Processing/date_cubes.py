@@ -23,6 +23,31 @@ import pandas as pd
 #   older pandas: see https://pandas.pydata.org/pandas-docs/version/0.13/api.html, search for sql
 import pandas.io.sql as psql
 
+
+####################################
+#
+#   global parameters for this file
+#
+####################################
+
+
+permitted_functions = ['inventory', 'inv-agg', 'agg-TAT', 'agg-gem']
+permitted_functions_with_descriptions = [
+        '- inventory: gives count of inventory for a given date, broken by stage',
+        '- inv-agg: gives count about the inventory for a given date, broken by stage and other categories',
+        '- agg-TAT: gives aggregate TAT information for a set of claims decided between 2 dates, broken by selected categories',
+        '- agg-gen: gives aggregate TAT information for a set of claims decided between 2 dates, broken by selected categories']
+    
+permitted_columns = ['diagnosis',
+                         'industry',
+                         'geo',
+                         'claims_analyst',
+                         'igo_nigo',
+                         'is_nurse_review_required',
+                         'accuracy_of_decision']
+    
+suggested_dates = ['2019-11-15', '2020-03-01']
+
 ####################################
 #
 #   the INVENTORY function
@@ -119,12 +144,13 @@ union
         and '{date_str:}' <= c.decided_1_date) 
  {group_by:} {group_cols:} )
 {order_by:}{group_cols:}
+{order_by_for_inventory:}
 
         """
     return q
    
  
-def inventory_query(db, list):
+def inventory_query(db, list, csv_or_json):
     print('\nHave entered the inventory_query function')
     date = list[0]
     # q = build_parameterized_inventory_query()
@@ -134,14 +160,24 @@ def inventory_query(db, list):
                  group_cols = '',
                  group_comma = '',
                  group_by = '',
-                 order_by = '')
+                 order_by = '',
+                 order_by_for_inventory = 'ORDER BY stage')
 
     print('\nThe query with date plugged in is:\n')
     print(q)
     print()
-    timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
-    filenameroot = 'inventory_as_of__' + date 
-    utils_postgres.export_query_to_csv(db, q, timestamp, filenameroot)   
+    
+    if csv_or_json == 'csv':
+        timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
+        filenameroot = 'inventory_as_of__' + date 
+        utils_postgres.export_query_to_csv(db, q, timestamp, filenameroot)  
+        return
+    elif csv_or_json == 'json':
+        return utils_postgres.export_query_to_json(db, q) 
+    else:
+        print('ERROR: you need to specify kind of output desired as "csv" or "json"')
+        return
+        
 
 
 # not using this one currently
@@ -178,7 +214,7 @@ def valid_inventory_input(list, suggested_dates):
     
  
 
-def inv_agg_query(db, list):
+def inv_agg_query(db, list, csv_or_json):
     print('\nHave entered inv_agg_query function')
     date = list[0]
     if len(list) == 1:   # this means there are no columns to do group-by aggregation on
@@ -193,18 +229,28 @@ def inv_agg_query(db, list):
                  group_cols = cols_comma,
                  group_comma = ',',
                  group_by = 'GROUP BY',
-                 order_by = 'ORDER BY stage, ')
+                 order_by = 'ORDER BY stage, ',
+                 order_by_for_inventory = '')
     print('\nThe query with date and columns plugged in is:\n')
     print(q)
     print()
-    cols_dash = list[1]
-    for i in range(2, len(list)):
-        cols_dash = cols_dash + '-' + list[i]
-    print('\nThe list of columns separated with dashes is:', cols_dash)
+    if csv_or_json == 'csv':
+        cols_dash = list[1]
+        for i in range(2, len(list)):
+            cols_dash = cols_dash + '-' + list[i]
+        print('\nThe list of columns separated with dashes is:', cols_dash)
     
-    timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
-    filenameroot = 'inv_agg_TAT_for__' + cols_dash + '__as_of__' + date 
-    utils_postgres.export_query_to_csv(db, q, timestamp, filenameroot)   
+        timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
+        filenameroot = 'inv_agg_TAT_for__' + cols_dash + '__as_of__' + date 
+        utils_postgres.export_query_to_csv(db, q, timestamp, filenameroot)   
+        return
+    elif csv_or_json == 'json':
+        return utils_postgres.export_query_to_json(db, q) 
+    else:
+        print('ERROR: you need to specify kind of output desired as "csv" or "json"')
+        return
+ 
+
     
 # not using this one currently
 def compute_inv_agg(db, list):
@@ -249,11 +295,11 @@ def build_parameterized_agg_query(switch):
         q = """
 select {cols_list}{comma:}
        count(*) as count_of_claims,
-       ROUND(AVG(total_biz_days), 2) as avg_TAT, 
+       ROUND(AVG(total_biz_days), 2)::float as avg_TAT, 
        sum(over_five_biz_days) as count_tat_over_5_days, 
-       ROUND(((100 * sum(over_five_biz_days))::float/count(*))::numeric, 2) as percent_tat_over_5_days,
+       ROUND(((100 * sum(over_five_biz_days))::float/count(*))::numeric, 2)::float as percent_tat_over_5_days,
        sum(over_ten_biz_days) as count_tat_over_10_days,
-       ROUND((( 100 * sum(over_ten_biz_days))::float / count(*))::numeric, 2) as percent_tat_over_10_days
+       ROUND((( 100 * sum(over_ten_biz_days))::float / count(*))::numeric, 2)::float as percent_tat_over_10_days
 from claims_with_durations
 where
    '{date_start:}' <= decided_2_date
@@ -265,7 +311,7 @@ where
         q = """
 select {cols_list}{comma:}
        count(*) as count_of_claims,
-       ROUND(AVG(total_biz_days), 2) as avg_TAT, 
+       ROUND(AVG(total_biz_days), 2)::float as avg_TAT, 
        sum(over_five_biz_days) as count_tat_over_5_days, 
        (100 * sum(over_five_biz_days))/count(*) as percent_tat_over_5_days,
        sum(over_ten_biz_days) as count_tat_over_10_days,
@@ -274,19 +320,19 @@ select {cols_list}{comma:}
        (select count(*)
                from claims_with_durations c1
                where  '{date_start:}' <= c1.decided_2_date
-                 and c1.decided_2_date <= '2020-02-09'
+                 and c1.decided_2_date <= '{date_end:}'
                  and c1.igo_nigo = 'NIGO' {and_cond_list:} )
           as total_nigo_count,
        ROUND((sum(nigo_followed_up_to_all_info_received_biz_days)::float /
                  (0.001 + (select count(*)
                   from claims_with_durations c1
-                  where  '2020-02-05' <= c1.decided_2_date
+                  where  '{date_start:}' <= c1.decided_2_date
                       and c1.decided_2_date <= '{date_end:}'
                       and c1.igo_nigo = 'NIGO' {and_cond_list:}
-                      )))::numeric, 2)
+                      )))::numeric, 2)::float
                 as avg_nigo_follow_up_days,
        sum(total_analyst_hours) as total_analyst_hours,
-       ROUND(AVG(total_analyst_hours)::numeric,2) as avg_analyst_hours
+       ROUND(AVG(total_analyst_hours)::numeric,2)::float as avg_analyst_hours
 from claims_with_durations c
 where
    '{date_start:}' <= decided_2_date
@@ -298,7 +344,7 @@ where
 
     return q
 
-def agg_query(db, list, switch):
+def agg_query(db, list, switch, csv_or_json):
     print('\nHave entered agg_gen_query function')
     date1 = list[0]
     date2 = list[1]
@@ -353,18 +399,23 @@ def agg_query(db, list, switch):
     print('\nThe query with dates and columns plugged in is:\n')
     print(q)
     print()
-    if len(list) == 2:
-        cols_dash = 'no-group-by-columns-selected'
-    else:
-        cols_dash = list[2]
-        for i in range(3, len(list)):
-            cols_dash = cols_dash + '-' + list[i]
-    print('\nThe list of columns separated with dashes is:', cols_dash)
+    if csv_or_json == 'csv':
+        if len(list) == 2:
+            cols_dash = 'no-group-by-columns-selected'
+        else:
+            cols_dash = list[2]
+            for i in range(3, len(list)):
+                cols_dash = cols_dash + '-' + list[i]
+        print('\nThe list of columns separated with dashes is:', cols_dash)
     
-    timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
-    filenameroot = 'agg_' + switch + '_for__' + cols_dash + '__for_claims_decided_between_' + date1 + '_and_' + date2
-    utils_postgres.export_query_to_csv(db, q, timestamp, filenameroot)
-
+        timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
+        filenameroot = 'agg_' + switch + '_for__' + cols_dash + '__for_claims_decided_between_' + date1 + '_and_' + date2
+        utils_postgres.export_query_to_csv(db, q, timestamp, filenameroot)
+    elif csv_or_json == 'json':
+        return utils_postgres.export_query_to_json(db, q) 
+    else:
+        print('ERROR: you need to specify kind of output desired as "csv" or "json"')
+        return
 
 # not using this one currently
 def compute_agg(db, list, switch):
@@ -382,7 +433,7 @@ def compute_agg(db, list, switch):
 
 
 def valid_agg_input(list, suggested_dates, permitted_columns):
-    if len(param_list) < 2:
+    if len(list) < 2:
         print('\n====> For this query you need to provide 2 dates, which provide the bounds on the decision dates of the claims to be considered')
         return False
     try:
@@ -397,13 +448,13 @@ def valid_agg_input(list, suggested_dates, permitted_columns):
         print('\n====> You entered the date ' + list[2])
         print('====> This is not a valid calendar date\n') 
         return False
-    if param_list[2] < param_list[1]:
-        print('\n====> You entered the dates', param_list[1], param_list[2])
+    if list[2] < list[1]:
+        print('\n====> You entered the dates', list[1], list[2])
         print('====> Please provide 2 dates where the first is <= the second\n')            
         return False
-    if param_list[1] < suggested_dates[0] or param_list[1] > suggested_dates[1] \
-            or param_list[2] < suggested_dates[0] or param_list[2] > suggested_dates[1]:
-        print('\n====> You entered the dates', param_list[1], param_list[2])
+    if list[1] < suggested_dates[0] or list[1] > suggested_dates[1] \
+            or list[2] < suggested_dates[0] or list[2] > suggested_dates[1]:
+        print('\n====> You entered the dates', list[1], list[2])
         print('====> Please use dates that are between ' + suggested_dates[0] + ' and ' + suggested_dates[1])
         print()
         return False
@@ -432,22 +483,6 @@ if __name__ == '__main__':
     # print('Number of arguments: ', str(len(sys.argv)), ' arguments.')
     # print('Argument List:', str(sys.argv))
     
-    permitted_functions = ['inventory', 'inv-agg', 'agg-TAT', 'agg-gem']
-    permitted_functions_with_descriptions = [
-        '- inventory: gives count of inventory for a given date, broken by stage',
-        '- inv-agg: gives count about the inventory for a given date, broken by stage and other categories',
-        '- agg-TAT: gives aggregate TAT information for a set of claims decided between 2 dates, broken by selected categories',
-        '- agg-gen: gives aggregate TAT information for a set of claims decided between 2 dates, broken by selected categories']
-    
-    permitted_columns = ['diagnosis',
-                         'industry',
-                         'geo',
-                         'claims_analyst',
-                         'igo_nigo',
-                         'is_nurse_review_required',
-                         'accuracy_of_decision']
-    
-    suggested_dates = ['2019-11-15', '2020-03-01']
     
     flag = False
     
@@ -456,16 +491,14 @@ if __name__ == '__main__':
     for i in range(1, len(sys.argv)):
         param_list.append(sys.argv[i])
     print('You entered the function name "', param_list[0], '", and parameters ', param_list[1:])
-    
-    
-    
+        
     
     if param_list[0] == 'inventory':
         if not valid_inventory_input(param_list, suggested_dates):
             sys.exit()
         # open postgres connection with mimic database
         db = utils_postgres.connect_postgres()    
-        inventory_query(db, param_list[1:])
+        inventory_query(db, param_list[1:], 'csv')
         # close connection to the mimic database    
         utils_postgres.close_postgres(db)
     elif param_list[0] == 'inv-agg':
@@ -473,7 +506,7 @@ if __name__ == '__main__':
             sys.exit()
         # open postgres connection with mimic database
         db = utils_postgres.connect_postgres()    
-        inv_agg_query(db, param_list[1:])
+        inv_agg_query(db, param_list[1:], 'csv')
         # close connection to the mimic database    
         utils_postgres.close_postgres(db)
     elif param_list[0] == 'agg-TAT':
@@ -482,7 +515,7 @@ if __name__ == '__main__':
         # open postgres connection with mimic database
         db = utils_postgres.connect_postgres() 
         switch = 'TAT'
-        agg_query(db, param_list[1:], switch)
+        agg_query(db, param_list[1:], switch, 'csv')
         # close connection to the mimic database    
         utils_postgres.close_postgres(db)
     elif param_list[0] == 'agg-gen':
@@ -491,7 +524,7 @@ if __name__ == '__main__':
         # open postgres connection with mimic database
         db = utils_postgres.connect_postgres() 
         switch = 'gen'
-        agg_query(db, param_list[1:], switch)
+        agg_query(db, param_list[1:], switch, 'csv')
         # close connection to the mimic database    
         utils_postgres.close_postgres(db)
     else:

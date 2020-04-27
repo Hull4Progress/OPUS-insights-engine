@@ -10,6 +10,7 @@ from constants_used_for_insights_engine import *
 import utils_general
 
 import sys
+import json
 
 # see http://initd.org/psycopg/docs/usage.html
 import psycopg2
@@ -44,13 +45,23 @@ def connect_postgres():
         db = {}
         db['conn'] = conn
         db['cursor'] = cursor
+        # see https://www.psycopg.org/docs/extras.html
+        db['cursor_json'] = db['conn'].cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # use the next one if you want records without the columns names 
+        # db['cursor_json'] = db['conn'].cursor(cursor_factory=psycopg2.extras.DictCursor)
         # set search path to opus schema
         cursor.execute("set search_path to opus")
         conn.commit()
         print('Set search_path to "opus" and committed')
         return db
-    except:
+    except Exception as e:
         print ("\nI am unable to connect to the database")
+        print('  The exception error message is as follows:')
+        if hasattr(e, 'message'):
+            print(e.message)
+        else:
+            print(e)
+
         print('\nExiting program because failed to connect to opus database\n')
         sys.exit()
 
@@ -214,7 +225,9 @@ def export_cube_query_to_csv(columns_list, q, db, timestamp):
     # util_general.print_current_time()
     
     
-    
+def export_query_to_json(db, q):
+    db['cursor_json'].execute(q)
+    return json.dumps(db['cursor_json'].fetchall(), indent=2)
     
     
 # illustration of using sqlalchemy
