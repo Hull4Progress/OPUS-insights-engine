@@ -6,9 +6,15 @@ Created on Thu Apr 16 23:04:38 2020
 @author: rick
 """
 
+import sys
+
+sys.path.append('../Constants')
 from constants_used_for_insights_engine import *
+
+sys.path.append('../Utilities')
 import utils_general
 import utils_postgres
+
 
 
 from datetime import datetime

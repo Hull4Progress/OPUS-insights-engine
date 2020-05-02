@@ -6,14 +6,19 @@ Created on Thu Apr  9 18:50:22 2020
 @author: rick
 """
 
+import sys
+
+sys.path.append('../Constants')
 from constants_used_for_insights_engine import *
+
+sys.path.append('../Utilities')
 import utils_general
 import utils_postgres
 
 
 from datetime import datetime
 
-import sys
+import math
 
 import psycopg2
 import psycopg2.extras
@@ -33,7 +38,14 @@ import pandas.io.sql as psql
 
 import random
 
+
+
 ##########################################
+#
+#   Pulling in RAW biz table
+#
+##########################################
+
 
 def pull__claims_raw_biz__table_into_df(db):
     print('\nEntering pull__claims_raw_biz__table_into_df')
@@ -76,6 +88,88 @@ def compute_hours_worked(nigo_following_up_hours,
                          deciding_2_hours
 '''
 
+##########################################
+#
+#   adding INTAKE columns
+#
+##########################################
+
+
+def build_intake_analyst_dict():
+    dict = {}
+    dict[0] = 'Anika Agarwal'
+    dict[1] = 'Kiara Ahuja'
+    dict[2] = 'Prisha Muthu'
+    dict[3] = 'Aditya Patel'
+    dict[4] = 'Umesh Anand'
+    dict[5] = 'Akhil Anand'
+    return dict    
+
+def assign_intake_analyst_to_claim(row):
+    rand = random.randrange(6)
+    # print ('random number is: '  + str(rand))
+    return rand
+
+def compute_intake_deciding_hours(row):
+    rand = random.gauss(.5, .1)
+    rand = round(max(.2, min(.8, rand)), 2)
+    # print ('random intake deciding time is: ' + str(rand))
+    return rand
+    
+def compute_received_to_intake_decided_biz_days(row):
+    if row.intake_decided_date.day <= 11:
+        midpoint = 1.5
+    else:
+        midpoint = 2.5
+    rand = random.gauss(midpoint,0.7)
+    rand = round(max(0, min(5, rand)))
+    # print('random biz days for intake decisioning is: ' + str(rand))
+    return rand
+    
+def compute_received_date(row):
+    received_date = utils_general.biz_days_offset(row.intake_decided_date, -1 * row.received_to_intake_decided_biz_days)
+    return received_date
+    
+
+'''
+This function is adding a new stage to the processing in Ramesh's synthetic claims database
+   In particualr we are adding an "intake_deciding" stage, that ends with "intake_decided"
+   We have added a new kind of analyst -- intake_analyst -- these are based in India
+   The decision will take under an hour of work
+   The decision will take between 0 and 4 days, with longer decisions happening in Dec and Feb (and maybe April)
+      (and maybe April; we are creating this for the 5K claims, and then replicating for the following months)
+'''
+def build__claims_with_intake__df(df):
+    # rename 'received_date' column to 'intake_decided_date'
+    df.rename(columns = {'received_date' : 'intake_decided_date'}, inplace=True)
+    
+    intake_anal_dict = build_intake_analyst_dict()
+    
+    df['intake_analyst'] = df.apply(lambda row: intake_anal_dict[assign_intake_analyst_to_claim(row)],
+                                          axis=1)
+
+    df['intake_deciding_hours'] = df.apply(lambda row: compute_intake_deciding_hours(row),
+                                               axis=1)
+
+    df['received_to_intake_decided_biz_days'] = df.apply(lambda row: compute_received_to_intake_decided_biz_days(row),
+                                                    axis=1)
+    
+    df['received_date'] =  df.apply(lambda row: compute_received_date(row),
+                                               axis=1)
+    
+    # utils_general.display_df(df)
+    return df
+
+
+
+##########################################
+#
+#   adding columns about TAT and days duration 
+#
+##########################################
+
+
+
 def compute_biz_days_between(date1, date2):
     return utils_general.biz_days_between_dates(date1, date2)
 
@@ -96,12 +190,13 @@ def compute_above_10_biz_days(total_biz_days):
 def build__claims_extended__df(df):  
     print('\nHave entered function to add the derived columns to the dataframe.')
 
-    df['total_analyst_hours'] = df.apply(lambda row: row.nigo_following_up_hours +\
-                                                  row.deciding_1_hours +\
-                                                  row.deciding_2_hours,
+    df['total_claims_analyst_hours'] = df.apply(lambda row: row.nigo_following_up_hours +\
+                                                            row.deciding_1_hours +\
+                                                            row.deciding_2_hours,
                                           axis=1)
     
-    df['total_hours'] = df.apply(lambda row: row.nigo_following_up_hours +\
+    df['total_hours'] = df.apply(lambda row: row.intake_deciding_hours +\
+                                             row.nigo_following_up_hours +\
                                              row.deciding_1_hours +\
                                              row.nurse_reviewing_hours +\
                                              row.deciding_2_hours,
@@ -117,7 +212,11 @@ def build__claims_extended__df(df):
     df['over_ten_biz_days'] = df.apply(lambda row: compute_above_10_biz_days(row.total_biz_days),
                                     axis=1)
 
-    df['received_to_nigo_followed_up_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.received_date,
+    df['received_to_intake_decided_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.received_date,
+                                                                         row.intake_decided_date),
+                                    axis=1)    
+
+    df['intake_decided_to_nigo_followed_up_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.intake_decided_date,
                                                                          row.nigo_followed_up_date),
                                     axis=1)    
 
@@ -125,6 +224,7 @@ def build__claims_extended__df(df):
                                                                          row.all_info_received_date),
                                     axis=1)    
 
+    # note: if the claim is IGO, then intake_decided_date = nigo_follows_up_date = all_info_received_date
     df['all_info_received_to_decided_1_biz_days'] = df.apply(lambda row: compute_biz_days_between(row.all_info_received_date,
                                                                          row.decided_1_date),
                                     axis=1)    
@@ -156,31 +256,60 @@ def drop__claims_extended__table(db):
 
 def create__claims_extended__table(db):
     print('\nEntered create__claims_extended__table')
+    # This new table has many columns that are also in claims_raw_biz.  In principle I should
+    #   be clever and avoid re-writing all of the column names from claims_raw_biz. 
+    #   For example, I could define a query string that has some parameters inside -- But I
+    #     am not doing that, since the creation of that table and the creation of the table here
+    #     is happening in separate python files. (
+    #   Or, I could define a new Postgres table based on a copy of the claims_raw_biz table 
+    #     (but not include any of the records) and then add new columns.  But I'm not doing
+    #     that because Postgres doesn't support changing column order in tables
     q = """
-          CREATE TABLE claims_extended as
-          SELECT *
-          FROM claims_raw_biz
-          WHERE Claim_num < 0;
-          
-          -- ALTER TABLE claims_extended
-          --   DROP CONSTRAINT Claim_num_for_raw_as_KEY;
-            
-          ALTER TABLE claims_extended
-            ADD CONSTRAINT Claim_num_for_extended_as_KEY 
-              PRIMARY KEY (Claim_num);
-          
-          ALTER TABLE claims_extended
-          ADD COLUMN total_analyst_hours float8,
-          ADD COLUMN total_hours float8,
-          ADD COLUMN total_biz_days int4,
-          ADD COLUMN over_five_biz_days int4,
-          ADD COLUMN over_ten_biz_days int4,
-          ADD COLUMN received_to_nigo_followed_up_biz_days int4,
-          ADD COLUMN nigo_followed_up_to_all_info_received_biz_days int4,
-          ADD COLUMN all_info_received_to_decided_1_biz_days int4,
-          ADD COLUMN decided_1_to_nurse_reviewed_biz_days int4,
-          ADD COLUMN nurse_reviewed_to_decided_2_biz_days int4
-        """
+          CREATE TABLE claims_extended (
+             claim_num int4 CONSTRAINT Claim_num_for_extended_as_KEY PRIMARY KEY,
+		     customer_num int4,
+		     salary_per_month int4,
+		     employee_level varchar,
+		     geo varchar,
+		     industry varchar,
+		     diagnosis varchar,
+             intake_analyst varchar,           -- this is new for claims_extended
+		     claims_analyst varchar,
+		     igo_nigo varchar,
+		     nigo_followed_up_mode varchar,
+		     is_nurse_review_required varchar,
+             intake_deciding_hours float8,     -- this is new for claims_extended
+		     nigo_following_up_hours float8,
+		     deciding_1_hours float8,
+		     nurse_reviewing_hours float8,
+		     deciding_2_hours float8,
+		     received_date date,
+             intake_decided_date date,         -- this is new for claims_extended
+		     nigo_followed_up_date date,
+		     all_info_received_date date,
+		     decided_1_date date,
+		     nurse_reviewed_date date,
+		     decided_2_date date,
+		     decision varchar,
+		     accuracy_of_decision varchar,
+		     accurate_decision int,
+		     wrongly_approved int,
+		     wrongly_declined int,
+		     dollar_cost_per_hour float,
+             total_claims_analyst_hours float8,      -- here and below are new for claims_extended
+             total_hours float8,
+             total_biz_days int4,
+             over_five_biz_days int4,
+             over_ten_biz_days int4,
+             received_to_intake_decided_biz_days int4,
+             intake_decided_to_nigo_followed_up_biz_days int4,
+             nigo_followed_up_to_all_info_received_biz_days int4,
+             all_info_received_to_decided_1_biz_days int4,
+             decided_1_to_nurse_reviewed_biz_days int4,
+             nurse_reviewed_to_decided_2_biz_days int4
+          )
+         """
+
     try:
         db['cursor'].execute(q)
         db['conn'].commit()
@@ -295,9 +424,13 @@ if __name__ == '__main__':
     # open postgres connection with mimic database
     db = utils_postgres.connect_postgres()
 
-    df_raw = pull__claims_raw_biz__table_into_df(db)
-    df_ext = build__claims_extended__df(df_raw)
+    df_raw = pull__claims_raw_biz__table_into_df(db)   # .head(50)
+    
+    df_intake = build__claims_with_intake__df(df_raw)
+    
+    df_ext = build__claims_extended__df(df_intake)
     print(df_ext)
+    utils_general.display_df(df_ext)
     print(list(df_ext.columns.values))
     
     drop__claims_extended__table(db)

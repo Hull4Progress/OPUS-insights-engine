@@ -6,13 +6,17 @@ Created on Mon Apr 20 00:33:49 2020
 @author: rick
 """
 
+import sys
+
+sys.path.append('../Constants')
 from constants_used_for_insights_engine import *
+
+sys.path.append('../Utilities')
 import utils_general
 import utils_postgres
 
 from datetime import datetime
 
-import sys
 
 import psycopg2
 import psycopg2.extras
@@ -56,7 +60,7 @@ suggested_dates = ['2019-11-15', '2020-03-01']
 
 '''
 Stages are:
-    igo_nigo_switch (an automated stage, so happens "immediately")
+    intake_deciding 
     nigo_following_up (in the case of nigo)
     waiting_for_nigo
     deciding_1 (either reaches a final decision of approve/reject or that a nurse review is needed)
@@ -68,10 +72,16 @@ Stages are:
 def build_parameterized_inv_agg_query():
     print('\nHave entered the function that creates query template for the inventory and inv_agg queries')
     q = """
-(select '1_following_up' as stage, {group_cols:}{group_comma:} count (*)
+(select '0_intake_deciding' as stage, {group_cols:}{group_comma:} count (*)
+ from claims_with_durations c
+ where c.received_date < '{date_str:}'
+   and '{date_str:}' <= c.intake_decided_date
+ {group_by:} {group_cols:} )
+union 
+ select '1_following_up' as stage, {group_cols:}{group_comma:} count (*)
  from claims_with_durations c
  where c.igo_nigo = 'NIGO' 
-   and c.received_date < '{date_str:}'
+   and c.intake_decided_date < '{date_str:}'
    and '{date_str:}' <= c.nigo_followed_up_date
  {group_by:} {group_cols:} )
 union 
@@ -94,7 +104,7 @@ union
 (select '4_deciding_1' as stage, {group_cols:}{group_comma:} count (*)
  from claims_with_durations c
  where ( c.igo_nigo = 'IGO'
-         and c.received_date < '{date_str:}'
+         and c.intake_decided_date < '{date_str:}'
          and '{date_str:}' <= c.decided_1_date )      
     or ( c.igo_nigo = 'NIGO'
          and c.all_info_received_date < '{date_str:}'

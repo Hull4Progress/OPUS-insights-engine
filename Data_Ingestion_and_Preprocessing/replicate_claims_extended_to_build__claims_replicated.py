@@ -6,7 +6,12 @@ Created on Sun Apr 19 03:27:10 2020
 @author: rick
 """
 
+import sys
+
+sys.path.append('../Constants')
 from constants_used_for_insights_engine import *
+
+sys.path.append('../Utilities')
 import utils_general
 import utils_postgres
 
@@ -175,7 +180,7 @@ if __name__ == '__main__':
     df_list = []
     df_list.append(df_ext)   # putting the original claims_extended as 1st element of list
 
-    for i in range(1,6):  # in range(1,5):
+    for i in range(1,8):  # in range(1,5):
         df_list.append(replicate_claims_extended_df(df_ext, i))
         
     print('\nThe length of df_list is: ' + str(len(df_list)))
