@@ -59,6 +59,7 @@ The set of US federal holidays between 2019-01-01 and 2021-12-31, as computed ab
                '2021-11-25', '2021-12-24', '2021-12-31']
 '''
 
+DEFAULT_DATE_FOR_TODAY = '2020-02-20'
 
 
 
