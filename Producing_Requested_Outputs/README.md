@@ -11,7 +11,7 @@ At present there are 2 main files:
 
 Here is the list of functions and subfunctions that will be implemented for
 "Panel 1", the overview panel.  The listing shows the main function name, the
-subfunction name, and then the parameters needed for them.
+subfunction name, and then after the ":" it shows the parameters needed for them.
 
 To illustrate, a couple of curl calls for the first function are as follows:
 
@@ -49,5 +49,5 @@ Here are the functions:
   - this_year
   - this_month
 
-Additional functions/subfunctions will be needed for the other panels.
+Additional functions/subfunctions will be developed for the other panels.
 
