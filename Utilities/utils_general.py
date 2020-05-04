@@ -10,6 +10,8 @@ from constants_used_for_insights_engine import *
 
 from datetime import datetime
 from datetime import date
+from dateutil.relativedelta import relativedelta
+
 
 import numpy as np
 
@@ -52,6 +54,18 @@ def cal_days_between_dates(d1, d2):
 def cal_days_offset(date_str, count):
     return str(convert_string_date_to_date(date_str) + pd.to_timedelta(count, unit='D')) 
 
+# following second comment of 
+#    https://stackoverflow.com/questions/546321/how-do-i-calculate-the-date-six-months-from-the-current-date-using-the-datetime
+def date_n_cal_months_before(date_str, n):
+    delta = 0 - n
+    return str(convert_string_date_to_date(date_str) + relativedelta(months=delta))
+
+def first_day_of_year_of_date(date_str):
+    return str(convert_string_date_to_date(date_str).replace(month=1,day=1))
+
+def first_day_of_month_of_date(date_str):
+    return str(convert_string_date_to_date(date_str).replace(day=1))
+
 def biz_day_on_or_immed_after(date_str):
     biz_date = np.busday_offset(date_str, 0, roll='forward', holidays=US_HOLIDAY_LIST)
     return str(biz_date)
@@ -65,6 +79,8 @@ def biz_days_between_dates(d1, d2):
  
 # see https://docs.scipy.org/doc/numpy/reference/generated/numpy.busday_offset.html#numpy.busday_offset
 #   for examples of the busday_offset with the roll='forward'
+# this returns a date that is count biz days after the input date.
+#    this works if count is negative
 def biz_days_offset(date, count):
     date1 = np.busday_offset(date, 0, roll='forward', holidays=US_HOLIDAY_LIST)
     if not np.is_busday(date, holidays=US_HOLIDAY_LIST):

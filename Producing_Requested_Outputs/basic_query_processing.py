@@ -17,6 +17,7 @@ import utils_postgres
 
 from datetime import datetime
 
+import json
 
 import psycopg2
 import psycopg2.extras
@@ -54,9 +55,68 @@ suggested_dates = ['2019-11-15', '2020-03-01']
 
 ####################################
 #
+#   the claims_decided_query function
+#
+####################################
+
+def build_parameterized_claims_decided_query():
+    q = """
+select count(*)
+from claims_with_durations c
+where c.decided_2_date >= '{start_date_str:}'
+  and c.decided_2_date <= '{end_date_str:}'
+  {include_TAT_clause:} {TAT_threshold:}
+        
+        """
+    return q
+
+def claims_decided_query(db, r, csv_or_json):
+    print('\nHave entered the claims_decided_query function')
+    q = build_parameterized_claims_decided_query()
+    if r.subfunction in ['total_this_year',
+                         'total_this_month',
+                         'total_in_period']:
+        q = q.format(start_date_str = r.start_date, 
+                     end_date_str = r.end_date,
+                     include_TAT_clause = '',
+                     TAT_threshold = ''
+                     )
+    elif r.subfunction in ['TAT_gt_n_in_period']:             
+        q = q.format(start_date_str = r.start_date, 
+                     end_date_str = r.end_date,
+                     include_TAT_clause = 'and c.total_biz_days >',
+                     TAT_threshold = str(r.biz_days_count)
+                     )
+                 
+    print('\nThe query with parameters plugged in is:\n')
+    print(q)
+    print()
+    
+    if csv_or_json in ['csv', 'csv_and_json', 'json_and_csv']:
+        timestamp = datetime.now().strftime('%Y-%m-%d--%H-%M') 
+        filenameroot = 'claims_decided__' + r.subfunction + '__' + r.start_date \
+                       + '_to_' + r.end_date
+        utils_postgres.export_query_to_csv(db, q, timestamp, filenameroot)
+        if csv_or_json == 'csv':
+            return json.dumps({'success': True, 
+                               'status' : 'wrote file ' + timestamp + '__' + filenameroot + '.csv'}, 
+                              indent=2)
+    if csv_or_json in ['json', 'csv_and_json', 'json_and_csv']:
+        print (utils_postgres.export_query_to_json(db, q))
+        # return json.dumps({'error': 'unspecified error'}, indent=2)
+        return utils_postgres.export_query_to_json(db, q) 
+    if csv_or_json not in ['csv', 'json', 'csv_and_json', 'json_and_csv']:
+        out = {'error': "The system needs to specify the data output format as 'csv' or 'json' or both.",
+               'success': False}
+        return json.dumps(out, indent=2)
+
+
+####################################
+#
 #   the INVENTORY function
 #
 ####################################
+
 
 '''
 Stages are:

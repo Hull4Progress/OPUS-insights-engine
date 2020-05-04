@@ -1,45 +1,53 @@
-# OPUS-insights-engine/Produing_Requested_Outputs
 
-This README.md is a work in progress and does not attempt to be comprehensive at this point.
-Also, the underlying code is evolving and this README.md may be out-of-date.
+This directory is focused on supporting REST APIs related to visualizing data that is requested through the UI.  Some of the queries are based on group-by and aggregation and others will produce lists of records.
+
+This area is a WORK IN PROGRESS.
+
+At present there are 2 main files:
+
+- REST_APIs_for_queries.py: Holds the REST APIs and does some checking for invalid input arguments
+
+- basic_query_processing.py: Holds parameterized SQL queries that support the REST APIs
+
+Here is the list of functions and subfunctions that will be implemented for
+"Panel 1", the overview panel.  The listing shows the main function name, the
+subfunction name, and then the parameters needed for them.
+
+To illustrate, a couple of curl calls for the first function are as follows:
+
+- curl --url http://127.0.0.1:5000/claims_decided/'?subfunction=total_this_year&today=2020-04-10'
+
+- curl --url http://127.0.0.1:5000/claims_decided/'?subfunction=total_in_period&today=2020-04-10&months_before=2'
+
+- curl --url http://127.0.0.1:5000/claims_decided/'?subfunction=TAT_gt_n_in_period&today=2020-04-10&months_before=2&biz_days_count=10'
 
 
 
-This repository holds a mix of python3, SQL, and shell code for manipulating insurance 
-claims data according to the OPUS framework.  The code assumes that
-- appropriate raw data about claims is available in a .csv file
-- appropriate raw data about some auxiliary info is available in .csv files (this currently includes claims_analyst_parameters.csv and diagnosis_duration_parameters.csv)
-- an instance of postgres is intalled on your local machine
+Here are the functions:
 
-Key modules currently include (this was written 2020-04-15 and may now be out of date)
-- constants_used_for_data_manip.py: holds various constants, 
-such as password for local postgres installations, location of data output directory, etc
+- claims_decided            : today
+  - this_year             
+  - this_month
+  - total_in_period        : biz_days_before XOR months_before
+  - TAT_gt_n_in_period     : biz_days_before XOR months_before, biz_days_count
 
-- import_OPUS_data.py: used to import "raw" data provided by Ramesh that includes about 
-approximately 5K claims (with receive dates between 2019-11-01 to 2019-11-15); builds the table claims_raw
+(The function/subfunctions above have been implemented.  The ones below are in progress.)
 
-- initial_claims_processing__columns_and_biz_days.py: adds several columns to the claims_raw table.  Soon it will
-also synthesize claims for many new days (with receive dates from roughly 2019-11-22 to 2020-02-28) to create 
-the full claims_extended table.
+- claims_returned_to_work   : today, months_before
+  - total
+  - duration_gt_x_percent  : percent
 
-- augment_with_durations.py: adds columns to claims_extended that relate to the overall pay-out duration (between date claim was received and the date of "return-to-work". The column values are based on computations and weighting functions based on the contents of a file Diagnosis_Duration_Parameters_v01.csv.  This function also imports this csv into the table diagnosis_duration_parameters for use in a later function.
+- decision_inventory        : today
+  - total
+  - pending_gt_n_days      : biz_days_count
 
-- build_cube.py: (not updated yet) script that will build a requested group-by aggregation table and write
-that as a .csv into the DATA_OUTPUT direcory (for the exact location please see 
-constants_used_for_data_manip.py). 
+- pay_out_inventory             : today
+  - total
+  - count_with_missed_touches  
 
-- files that end with "_7K.py" (deprecated): these were developed for the raw claims data set
-with about 7K claims in it; we will delete this files in a while
+- claims_received               : today
+  - this_year
+  - this_month
 
-- cube_explorations_7K.py (deprecated): based on a curious SQL query that creates, in essence, 
-the union of many group-by aggregation tables, all placed into one table called 
-claims_cube.  (This was developed for an earlier version  of the claims_raw data,
-and has not yet been upgraded to the 5K claims dataset.)
-
-- utils_general.py: some basic utility functions
-
-- utils_postgres.py: some postgres-specific utilities
-
-- run.sh: a shell script use to invoke some selected python scripts; right now the focus
-is on initialization, spez., invoking import_OPUS_data.py and initial_claims_process__columns_and_days.py
+Additional functions/subfunctions will be needed for the other panels.
 
