@@ -1,20 +1,17 @@
+This top-level directory will hold subdirectories for the major subsystems of the OPUS Insights Engine.
 
-
-
-This GitHub repository holds code related to the OPUS business insights initiative.
-
-Currently there are 6 directories here, namely:
+There are currently 2 subdirectories:
 
 - Documents: This holds selected documents about the project, primarly in .docx and .pptx format.
 
-- Constants: This currently holds a python script with constants that are used elsewhere in the python code.  We might add a similar file for constants used in Java code.
+- Data_Preprocessing_and_Queries: Holds python/SQL scripts for 2 main activities:
+  - Preprocessing of synthetic data to produce a synthetic example of data in the "OPUS target schema"
+  - Supporting REST APIs that invoke SQL queries against the data held in the target schema
 
-- Utilities: This holds files with various utility functions that are used by code in other directories.  At present there are python utilities here; we may add some Java utilities as well.
+We anticipate that two additional subdirectories will be added by Sunder, which will hold the codebases
+for the
+- Data Ingestion and Processing Pipeline
+- UI
 
-- Raw_and_Derived_Data: This holds files with raw data, primarily a file with about 5K synthetic claims for short-term disability insurance.  It also holds selected output data files. 
-
-- Data_Ingestion_and_Preprocessing: This holds a family of python+sql scripts that ingest the synthetic data and augments it in various ways.  In general the derived files are written into a local Postgres and also into .csv files for easy inspection and sharing.  (The .csv files are typically written to a directory that is outside of the GitHub directory, according to a value in the ../Constants python script.)
-
-- Producing_Requested_Outputs: This directory holds the REST APIs for the various output queries that the UI will be invoking.  It also holds python+sql scripts for invoking those queries against the local Postgres.
-
-
+Also, code will be developed for producing synthetic data corresponding to the data sets available in
+an insurance company's systems of record.  
