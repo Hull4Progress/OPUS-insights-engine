@@ -1,7 +1,9 @@
 
 
 
-This GitHub repository holds code related to the OPUS business insights initiative.
+This directory holds code related to
+- Synthesizing a database in the "OPUS target schema" from an initial set of about 5K claims provided by Ramesh, and
+- REST APIs that can be used to invoke queries against that target schema.
 
 Currently there are 5 directories here, namely:
 
